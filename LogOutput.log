@@ -1,0 +1,30 @@
+[Error  :  HarmonyX] Failed to patch virtual void Hacknet.SALoadMission::Trigger(object os_obj): System.Exception: Parameter "os" not found in method virtual void Hacknet.SALoadMission::Trigger(object os_obj)
+   at HarmonyLib.Public.Patching.HarmonyManipulator.EmitCallParameter(ILEmitter il, MethodBase original, MethodInfo patch, Dictionary`2 variables, Boolean allowFirsParamPassthrough, VariableDefinition& tmpObjectVar, List`1& tmpBoxVars) IL<0x06A8>
+   at HarmonyLib.Public.Patching.HarmonyManipulator.WritePrefixes(ILEmitter il, MethodBase original, Label returnLabel, Dictionary`2 variables, ICollection`1 prefixes, Boolean debug) IL<0x012D>
+   at HarmonyLib.Public.Patching.HarmonyManipulator.MakePatched(MethodBase original, ILContext ctx, List`1 prefixes, List`1 postfixes, List`1 transpilers, List`1 finalizers, List`1 ilmanipulators, Boolean debug) IL<0x019E>
+[Error  :   BepInEx] Error loading [A Plugin with Extra Events for Cilent and Server 1.0.0]: HarmonyLib.HarmonyException: IL Compile Error (unknown location) ---> HarmonyLib.HarmonyException: IL Compile Error (unknown location) ---> HarmonyLib.HarmonyException: IL Compile Error (unknown location) ---> System.Exception: Parameter "os" not found in method virtual void Hacknet.SALoadMission::Trigger(object os_obj)
+   at HarmonyLib.Public.Patching.HarmonyManipulator.EmitCallParameter(ILEmitter il, MethodBase original, MethodInfo patch, Dictionary`2 variables, Boolean allowFirsParamPassthrough, VariableDefinition& tmpObjectVar, List`1& tmpBoxVars) IL<0x06A8>
+   at HarmonyLib.Public.Patching.HarmonyManipulator.WritePrefixes(ILEmitter il, MethodBase original, Label returnLabel, Dictionary`2 variables, ICollection`1 prefixes, Boolean debug) IL<0x012D>
+   at HarmonyLib.Public.Patching.HarmonyManipulator.MakePatched(MethodBase original, ILContext ctx, List`1 prefixes, List`1 postfixes, List`1 transpilers, List`1 finalizers, List`1 ilmanipulators, Boolean debug) IL<0x019E>
+   --- End of inner exception stack trace ---
+   at HarmonyLib.Public.Patching.HarmonyManipulator.MakePatched(MethodBase original, ILContext ctx, List`1 prefixes, List`1 postfixes, List`1 transpilers, List`1 finalizers, List`1 ilmanipulators, Boolean debug) IL<0x0297>
+   at HarmonyLib.Public.Patching.HarmonyManipulator.Manipulate(MethodBase original, PatchInfo patchInfo, ILContext ctx) IL<0x0051>
+   at HarmonyLib.Public.Patching.ManagedMethodPatcher.Manipulator(ILContext ctx) IL<0x0000>
+   at MonoMod.Cil.ILContext.Invoke(Manipulator manip) IL<0x0087>
+   at MonoMod.RuntimeDetour.ILHook.Context.InvokeManipulator(MethodDefinition def, Manipulator cb) IL<0x0012>
+   at DMD<MonoMod.RuntimeDetour.ILHook+Context::Refresh>(Context this) IL<0xFFFFFFFF>
+   at Trampoline<MonoMod.RuntimeDetour.ILHook+Context::Refresh>?58892473(Object ) IL<0xFFFFFFFF>
+   at HarmonyLib.Internal.RuntimeFixes.StackTraceFixes.OnILChainRefresh(Object self) IL<0x0000>
+   at MonoMod.RuntimeDetour.ILHook.Apply() IL<0x004C>
+   at HarmonyLib.Public.Patching.ManagedMethodPatcher.DetourTo(MethodBase replacement) IL<0x0047>
+   --- End of inner exception stack trace ---
+   at HarmonyLib.Public.Patching.ManagedMethodPatcher.DetourTo(MethodBase replacement) IL<0x0054>
+   at HarmonyLib.PatchFunctions.UpdateWrapper(MethodBase original, PatchInfo patchInfo) IL<0x0026>
+   --- End of inner exception stack trace ---
+   at HarmonyLib.PatchFunctions.UpdateWrapper(MethodBase original, PatchInfo patchInfo) IL<0x0040>
+   at HarmonyLib.PatchProcessor.Patch() IL<0x00FF>
+   at HarmonyLib.Harmony.Patch(MethodBase original, HarmonyMethod prefix, HarmonyMethod postfix, HarmonyMethod transpiler, HarmonyMethod finalizer, HarmonyMethod ilmanipulator) IL<0x0000>
+   at ServerClientEventsMod.Events.ActionTriggerInterceptor.EnsurePatched() IL<0x0107>
+   at ExtraEventsPlugin.ExtraEventsPlugin.Load() IL<0x001C>
+   at DMD<BepInEx.Hacknet.HacknetChainloader::LoadPlugin>(HacknetChainloader this, PluginInfo pluginInfo, Assembly pluginAssembly) IL<0xFFFFFFFF>
+   at DMD<BepInEx.Bootstrap.BaseChainloader`1[[BepInEx.Hacknet.HacknetPlugin, BepInEx.Hacknet, Version=5.0.0.0, Culture=neutral, PublicKeyToken=null]]::Execute>(BaseChainloader`1 this) IL<0xFFFFFFFF>
