@@ -1,0 +1,483 @@
+[Message:   BepInEx] Chainloader initialized
+[Debug  :   BepInEx] Skipping loading D:\Steam\steamapps\common\Hacknet\BepInEx\plugins\cimgui.dll because it's not a valid .NET assembly. Full error: 可执行文件(.exe)或库(.dll)的格式无效。
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\BepInEx\plugins\HacknetHotReplace.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\BepInEx\plugins\ImGui.NET.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\BepInEx\plugins\LiteNetLib.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\BepInEx\plugins\PathfinderAPI.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\BepInEx\plugins\PathfinderUpdater.dll'
+[Info   :   BepInEx] 3 plugins to load
+[Info   :   BepInEx] Loading [AutoUpdater 5.3.4]
+[Info   :   BepInEx] Loading [PathfinderAPI 5.3.4]
+HHBS-Folderpath: E:\documents/My Games/Hacknet
+[Info   :   BepInEx] Loading [HacknetHotReplace 1.0.5]
+[Info   :HacknetHotReplace] HotReplaceServer Start Success, listen port:8000
+[Message:   BepInEx] Chainloader startup complete
+Steam Init Failed!
+First Init Failed.  Second init Running = False
+Loaded Settings - Language Code: en-us
+IGLDevice: OpenGLDevice
+OpenGL Device: NVIDIA GeForce RTX 3050 Laptop GPU/PCIe/SSE2
+OpenGL Driver: 4.6.0 NVIDIA 610.47
+OpenGL Vendor: NVIDIA Corporation
+MojoShader Profile: glsl120
+Graphics Device Resetting
+Graphics Device Reset Started
+Graphics Device Reset Complete
+Using EXT_swap_control_tear VSync!
+Started song loader thread
+Menu load complete
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\AutoCrackFirewall.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\DifficultyControler.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\FamilyNetworkCracker.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\HacknetFontReplace.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\KernelExtensions.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\KT-Redit.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\LibVLCSharp.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\LiteNetLib.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\ModManger.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\PassPort.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\PortControl.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\RtSpCore-Re.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\RtSpFileEditor.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\RtSpPortCreaker.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\ServerPlugin.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\SRPortToolkit.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\TAXCoreOnline.dll'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\TempestGadgetsnewv.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\assets\KernelExtensions.dll'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Debug  :   BepInEx] Unable to resolve cecil search directory 'Hacknet_Data\Managed'
+[Info   :   BepInEx] 18 plugins to load
+[Warning:   BepInEx] Skipping [KernelExtensions 0.7.0] because a newer version exists (KernelExtensions 0.7.0)
+[Info   :   BepInEx] Loading [ModManger 1.0.0]
+[Message: ModManger] ModManger 已加载，热重载管理器就绪
+[Info   :   BepInEx] Loading [TAXCore Online 1.0.0]
+[Error  :   BepInEx] Error loading [TAXCore Online 1.0.0]: System.InvalidOperationException: Client is not running
+   at LiteNetLib.NetManager.Connect(IPEndPoint target, NetDataWriter connectionData) IL<0x0014>
+   at LiteNetLib.NetManager.Connect(String address, Int32 port, NetDataWriter connectionData) IL<0x0020>
+   at LiteNetLib.NetManager.Connect(String address, Int32 port, String key) IL<0x0000>
+   at TAXCoreOnline.TAXCoreOnline.Load() IL<0x0011>
+   at DMD<BepInEx.Hacknet.HacknetChainloader::LoadPlugin>(HacknetChainloader this, PluginInfo pluginInfo, Assembly pluginAssembly) IL<0xFFFFFFFF>
+   at DMD<BepInEx.Bootstrap.BaseChainloader`1[[BepInEx.Hacknet.HacknetPlugin, BepInEx.Hacknet, Version=5.0.0.0, Culture=neutral, PublicKeyToken=null]]::Execute>(BaseChainloader`1 this) IL<0xFFFFFFFF>
+[Info   :   BepInEx] Loading [Err0r-AutoCrackFirewall 1.0.0]
+AutoCrackFirewall Load Complete.
+[Info   :   BepInEx] Loading [FamilyNetworkCracker 1.0.0]
+[Info   :   BepInEx] Loading [KT-Redit 1.0.0]
+[KT-Redit]Success!
+[Info   :   BepInEx] Loading [KernelExtensions 0.7.0]
+[Debug  :KernelExtensions] SetNodeIcon action registered.
+[Debug  :KernelExtensions] OSLoaded NodeIcon restore handler registered.
+[KernelExtensions] Registering executables...
+[Debug  :KernelExtensions] CustomTrial registered.
+[Debug  :KernelExtensions] PhaseSwift registered.
+[KernelExtensions] Registering actions...
+[Debug  :KernelExtensions] FailTrial action registered.
+[Debug  :KernelExtensions] LaunchVMAttack action registered.
+[Debug  :KernelExtensions] PlaySound action registered.
+[Debug  :KernelExtensions] PhaseSwiftScene action registered.
+[Debug  :KernelExtensions] PhaseSwiftInit action registered.
+[Debug  :KernelExtensions] PhaseSwiftStop action registered.
+[Debug  :KernelExtensions] PhaseSwiftFadeOut action registered.
+[Debug  :KernelExtensions] PhaseSwiftMusic action registered.
+[Debug  :KernelExtensions] SwitchToThemeKeepLayout action registered.
+[Debug  :KernelExtensions] TerminalFocus action registered.
+[Debug  :KernelExtensions] TerminalWrite action registered.
+[Debug  :KernelExtensions] TerminalType action registered.
+[Debug  :KernelExtensions] RenameNode action registered.
+[Debug  :KernelExtensions] RestoreCustomTrialNodes action registered.
+[KernelExtensions] Registering event handlers...
+[Debug  :KernelExtensions] OSLoaded event handler registered.
+[Debug  :KernelExtensions] Save event handler registered.
+[KernelExtensions] Registering save loaders...
+[Debug  :KernelExtensions] CustomTrialSaveExecutor registered.
+[KernelExtensions] Registering aircraft-related actions and daemons...
+[KernelExtensions] Thanks for April_Crystal
+[Debug  :KernelExtensions] HideAircraftOverlay action registered.
+[Debug  :KernelExtensions] ShowAircraftOverlay action registered.
+[Debug  :KernelExtensions] FlightDaemon registered.
+[Debug  :KernelExtensions] UploadAircraftSysFile action registered.
+[Debug  :KernelExtensions] AttackAircraft action registered.
+[KernelExtensions] Applying Harmony patches...
+[KernelExtensions] All is well ** SUCCESS!!
+[Info   :   BepInEx] Loading [RtSp_PassPort 1.0.0]
+RtSp_PassPort System Load Completed!
+[Info   :   BepInEx] Loading [PortControl 1.0.0]
+[Info   :   BepInEx] Loading [RtSpCore-Re 1.0.1]
+RTSP-CORE: Harmony补丁已应用
+[Info   :   BepInEx] Loading [RtSpDifficultyController 1.0.0]
+[Info   :   BepInEx] Loading [RtSpFileEditor 1.0.0]
+
+[RtSpFileEditor] Register Complete.
+//////////////////////////////////// RtSpFileEditor //////////////////////////////////
+/////////////////////////////////// ThanksForUsing ////////////////////////////////////
+////////////////////////////////// WELCOME /////////////////////////////////////
+
+[Info   :   BepInEx] Loading [RtSpPortCreaker 1.0.0]
+RtSpPortCreaker Load Complete.
+[Info   :   BepInEx] Loading [ServerPlugin 1.0.0]
+[Info   :   BepInEx] Loading [TempestGadgets 0.3.0]
+
+
++===============================================================================+
+| _________  _______   _____ ______   ________  _______   ________  _________   |
+||\___   ___\\  ___ \ |\   _ \  _   \|\   __  \|\  ___ \ |\   ____\|\___   ___\ |
+|\|___ \  \_\ \   __/|\ \  \\\__\ \  \ \  \|\  \ \   __/|\ \  \___|\|___ \  \_| |
+|     \ \  \ \ \  \_|/_\ \  \\|__| \  \ \   ____\ \  \_|/_\ \_____  \   \ \  \  |
+|      \ \  \ \ \  \_|\ \ \  \    \ \  \ \  \___|\ \  \_|\ \|____|\  \   \ \  \ |
+|       \ \__\ \ \_______\ \__\    \ \__\ \__\    \ \_______\____\_\  \   \ \__\|
+|        \|__|  \|_______|\|__|     \|__|\|__|     \|_______|\_________\   \|__||
+|                                                           \|_________|        |
+| ________  ________  ________  ________  _______  _________  ________          |
+||\   ____\|\   __  \|\   ___ \|\   ____\|\  ___ \|\___   ___\\   ____\         |
+|\ \  \___|\ \  \|\  \ \  \_|\ \ \  \___|\ \   __/\|___ \  \_\ \  \___|_        |
+| \ \  \  __\ \   __  \ \  \ \\ \ \  \  __\ \  \_|/__  \ \  \ \ \_____  \       |
+|  \ \  \|\  \ \  \ \  \ \  \_\\ \ \  \|\  \ \  \_|\ \  \ \  \ \|____|\  \      |
+|   \ \_______\ \__\ \__\ \_______\ \_______\ \_______\  \ \__\  ____\_\  \     |
+|    \|_______|\|__|\|__|\|_______|\|_______|\|_______|   \|__| |\_________\    |
+|                                                               \|_________|    |
++===============================================================================+
+
+[Debug  :TempestGadgets] Loading Patches...
+[Debug  :TempestGadgets] Loading Daemons...
+[Debug  :TempestGadgets] Loading Executables...
+[Debug  :TempestGadgets] Loading Actions...
+[Debug  :TempestGadgets] Loading Events...
+[Debug  :TempestGadgets] Loading Commands...
+[Info   :   BepInEx] Loading [SRPortToolkit 0.1.0]
+[Debug  :SRPortToolkit] Loading Ports...
+[Debug  :SRPortToolkit] Port 'IMAP' (143) registered successfully
+[Debug  :SRPortToolkit] Port 'DNS' (53) registered successfully
+[Debug  :SRPortToolkit] Port 'RPC' (135) registered successfully
+[Debug  :SRPortToolkit] Port 'Redis' (6379) registered successfully
+[Debug  :SRPortToolkit] Port 'NFS' (2049) registered successfully
+[Debug  :SRPortToolkit] Port 'IDAP' (389) registered successfully
+[Debug  :SRPortToolkit] Loading Ports Complete
+[SRPortToolkit] Loading Complete
+//////////////////////////////////// ZQG //////////////////////////////////
+/////////////////////////////////// SR.OS ////////////////////////////////////
+//////////////////////////////  SRPortToolkit  /////////////////////////////////
+//////////////////////////// SR.OS OverLapping /////////////////////////////////
+[Info   :   BepInEx] Loading [HacknetFontReplace 1.0.2]
+[Info   :HacknetFontReplace] try load FontStashSharp.FNA from memory resource 
+[Info   :HacknetFontReplace] try load Sprache from memory resource 
+[Info   :HacknetFontReplace] try load FontStashSharp.Base from memory resource 
+[Info   :HacknetFontReplace] try load FontStashSharp.Rasterizers.StbTrueTypeSharp from memory resource 
+[Info   :HacknetFontReplace] try load StbTrueTypeSharp from memory resource 
+[Info   :   BepInEx] Loading [PassPort Patch 1.0.0]
+PassPortPlugin v1.0.0 loaded!
+[Message:   BepInEx] Chainloader startup complete
+[KE-CN] Prefix injected from Extensions/tmod\KE-IRClogs_CN.txt
+[Message:HacknetChainloader] Unloading extension plugins...
+[Message:HacknetChainloader] Unloaded PassPort.Patch
+[Message:HacknetChainloader] Unloaded HacknetFontReplace-WEDF156WFWEF1WEFV15
+[Message:HacknetChainloader] Unloaded com.ZQG.SRPortToolkit
+[Message:HacknetChainloader] Unloaded com.wncry.TempestGadgets
+[Message:HacknetChainloader] Unloaded com.ServerPlugin.Tesr
+[Message:HacknetChainloader] Unloaded com.RtSpPortCreaker.test
+[Message:HacknetChainloader] Unloaded com.RtSpFileEditor.test
+[Message:HacknetChainloader] Unloaded com.RtSpDifficultyController.mod
+[Message:HacknetChainloader] Unloaded com.RtSpCore-Re.rtsp
+[Message:HacknetChainloader] Unloaded com.RtSp_PortControl.test
+[Message:HacknetChainloader] Unloaded com.PassPort.test
+[Message:HacknetChainloader] Unloaded com.LDTchara.KernelExtensions
+[Message:HacknetChainloader] Unloaded com.KT-Redit.AprilCrystal
+[Message:HacknetChainloader] Unloaded com.fanetcrack
+[Message:HacknetChainloader] Unloaded com.Err0r-AutoCrackFirewall.test
+[Message:HacknetChainloader] Unloaded com.AprilCrystal.test
+[Message:HacknetChainloader] Finished unloading extension plugins
+[Debug  :   BepInEx] Examining 'D:\Steam\steamapps\common\Hacknet\Extensions\tmod\Plugins\ServerPlugin.dll'
+[Info   :   BepInEx] 18 plugins to load
+[Warning:   BepInEx] Skipping [KernelExtensions 0.7.0] because a newer version exists (KernelExtensions 0.7.0)
+[Info   :   BepInEx] Loading [ModManger 1.0.0]
+[Error  :   BepInEx] Error loading [ModManger 1.0.0]: System.ArgumentException: Command HotReplaceMod has already been registered!
+Parameter name: commandName
+   at Pathfinder.Command.CommandManager.RegisterCommand(String commandName, Action`2 handler, Boolean addAutocomplete, Boolean caseSensitive) IL<0x004F>
+   at Pathfinder.Meta.Load.CommandAttribute.CallOn(HacknetPlugin plugin, MemberInfo targettedInfo) IL<0x0000>
+   at Pathfinder.Meta.Load.AttributeManager.ReadAttributesOnType(HacknetPlugin plugin, Type type) IL<0x0069>
+   at Pathfinder.Meta.Load.AttributeManager.ReadAttributesFor(HacknetPlugin plugin) IL<0x0010>
+   at DMD<BepInEx.Hacknet.HacknetChainloader::LoadPlugin>(HacknetChainloader this, PluginInfo pluginInfo, Assembly pluginAssembly) IL<0xFFFFFFFF>
+   at DMD<BepInEx.Bootstrap.BaseChainloader`1[[BepInEx.Hacknet.HacknetPlugin, BepInEx.Hacknet, Version=5.0.0.0, Culture=neutral, PublicKeyToken=null]]::Execute>(BaseChainloader`1 this) IL<0xFFFFFFFF>
+[Info   :   BepInEx] Loading [TAXCore Online 1.0.0]
+[Error  :   BepInEx] Error loading [TAXCore Online 1.0.0]: System.InvalidOperationException: Client is not running
+   at LiteNetLib.NetManager.Connect(IPEndPoint target, NetDataWriter connectionData) IL<0x0014>
+   at LiteNetLib.NetManager.Connect(String address, Int32 port, NetDataWriter connectionData) IL<0x0020>
+   at LiteNetLib.NetManager.Connect(String address, Int32 port, String key) IL<0x0000>
+   at TAXCoreOnline.TAXCoreOnline.Load() IL<0x0011>
+   at DMD<BepInEx.Hacknet.HacknetChainloader::LoadPlugin>(HacknetChainloader this, PluginInfo pluginInfo, Assembly pluginAssembly) IL<0xFFFFFFFF>
+   at DMD<BepInEx.Bootstrap.BaseChainloader`1[[BepInEx.Hacknet.HacknetPlugin, BepInEx.Hacknet, Version=5.0.0.0, Culture=neutral, PublicKeyToken=null]]::Execute>(BaseChainloader`1 this) IL<0xFFFFFFFF>
+[Info   :   BepInEx] Loading [Err0r-AutoCrackFirewall 1.0.0]
+AutoCrackFirewall Load Complete.
+[Info   :   BepInEx] Loading [FamilyNetworkCracker 1.0.0]
+[Info   :   BepInEx] Loading [KT-Redit 1.0.0]
+[KT-Redit]Success!
+[Info   :   BepInEx] Loading [KernelExtensions 0.7.0]
+[Debug  :KernelExtensions] SetNodeIcon action registered.
+[Debug  :KernelExtensions] OSLoaded NodeIcon restore handler registered.
+[KernelExtensions] Registering executables...
+[Debug  :KernelExtensions] CustomTrial registered.
+[Debug  :KernelExtensions] PhaseSwift registered.
+[KernelExtensions] Registering actions...
+[Debug  :KernelExtensions] FailTrial action registered.
+[Debug  :KernelExtensions] LaunchVMAttack action registered.
+[Debug  :KernelExtensions] PlaySound action registered.
+[Debug  :KernelExtensions] PhaseSwiftScene action registered.
+[Debug  :KernelExtensions] PhaseSwiftInit action registered.
+[Debug  :KernelExtensions] PhaseSwiftStop action registered.
+[Debug  :KernelExtensions] PhaseSwiftFadeOut action registered.
+[Debug  :KernelExtensions] PhaseSwiftMusic action registered.
+[Debug  :KernelExtensions] SwitchToThemeKeepLayout action registered.
+[Debug  :KernelExtensions] TerminalFocus action registered.
+[Debug  :KernelExtensions] TerminalWrite action registered.
+[Debug  :KernelExtensions] TerminalType action registered.
+[Debug  :KernelExtensions] RenameNode action registered.
+[Debug  :KernelExtensions] RestoreCustomTrialNodes action registered.
+[KernelExtensions] Registering event handlers...
+[Debug  :KernelExtensions] OSLoaded event handler registered.
+[Debug  :KernelExtensions] Save event handler registered.
+[KernelExtensions] Registering save loaders...
+[Debug  :KernelExtensions] CustomTrialSaveExecutor registered.
+[KernelExtensions] Registering aircraft-related actions and daemons...
+[KernelExtensions] Thanks for April_Crystal
+[Debug  :KernelExtensions] HideAircraftOverlay action registered.
+[Debug  :KernelExtensions] ShowAircraftOverlay action registered.
+[Debug  :KernelExtensions] FlightDaemon registered.
+[Debug  :KernelExtensions] UploadAircraftSysFile action registered.
+[Debug  :KernelExtensions] AttackAircraft action registered.
+[KernelExtensions] Applying Harmony patches...
+[KernelExtensions] All is well ** SUCCESS!!
+[Info   :   BepInEx] Loading [RtSp_PassPort 1.0.0]
+RtSp_PassPort System Load Completed!
+[Info   :   BepInEx] Loading [PortControl 1.0.0]
+[Info   :   BepInEx] Loading [RtSpCore-Re 1.0.1]
+[Error  :   BepInEx] Error loading [RtSpCore-Re 1.0.1]: System.ArgumentException: Command addFlags has already been registered!
+Parameter name: commandName
+   at Pathfinder.Command.CommandManager.RegisterCommand(String commandName, Action`2 handler, Boolean addAutocomplete, Boolean caseSensitive) IL<0x004F>
+   at Pathfinder.Meta.Load.CommandAttribute.CallOn(HacknetPlugin plugin, MemberInfo targettedInfo) IL<0x0000>
+   at Pathfinder.Meta.Load.AttributeManager.ReadAttributesOnType(HacknetPlugin plugin, Type type) IL<0x0069>
+   at Pathfinder.Meta.Load.AttributeManager.ReadAttributesFor(HacknetPlugin plugin) IL<0x0010>
+   at DMD<BepInEx.Hacknet.HacknetChainloader::LoadPlugin>(HacknetChainloader this, PluginInfo pluginInfo, Assembly pluginAssembly) IL<0xFFFFFFFF>
+   at DMD<BepInEx.Bootstrap.BaseChainloader`1[[BepInEx.Hacknet.HacknetPlugin, BepInEx.Hacknet, Version=5.0.0.0, Culture=neutral, PublicKeyToken=null]]::Execute>(BaseChainloader`1 this) IL<0xFFFFFFFF>
+[Info   :   BepInEx] Loading [RtSpDifficultyController 1.0.0]
+[Info   :   BepInEx] Loading [RtSpFileEditor 1.0.0]
+
+[RtSpFileEditor] Register Complete.
+//////////////////////////////////// RtSpFileEditor //////////////////////////////////
+/////////////////////////////////// ThanksForUsing ////////////////////////////////////
+////////////////////////////////// WELCOME /////////////////////////////////////
+
+[Info   :   BepInEx] Loading [RtSpPortCreaker 1.0.0]
+RtSpPortCreaker Load Complete.
+[Info   :   BepInEx] Loading [ServerPlugin 1.0.0]
+[Info   :   BepInEx] Loading [TempestGadgets 0.3.0]
+
+
++===============================================================================+
+| _________  _______   _____ ______   ________  _______   ________  _________   |
+||\___   ___\\  ___ \ |\   _ \  _   \|\   __  \|\  ___ \ |\   ____\|\___   ___\ |
+|\|___ \  \_\ \   __/|\ \  \\\__\ \  \ \  \|\  \ \   __/|\ \  \___|\|___ \  \_| |
+|     \ \  \ \ \  \_|/_\ \  \\|__| \  \ \   ____\ \  \_|/_\ \_____  \   \ \  \  |
+|      \ \  \ \ \  \_|\ \ \  \    \ \  \ \  \___|\ \  \_|\ \|____|\  \   \ \  \ |
+|       \ \__\ \ \_______\ \__\    \ \__\ \__\    \ \_______\____\_\  \   \ \__\|
+|        \|__|  \|_______|\|__|     \|__|\|__|     \|_______|\_________\   \|__||
+|                                                           \|_________|        |
+| ________  ________  ________  ________  _______  _________  ________          |
+||\   ____\|\   __  \|\   ___ \|\   ____\|\  ___ \|\___   ___\\   ____\         |
+|\ \  \___|\ \  \|\  \ \  \_|\ \ \  \___|\ \   __/\|___ \  \_\ \  \___|_        |
+| \ \  \  __\ \   __  \ \  \ \\ \ \  \  __\ \  \_|/__  \ \  \ \ \_____  \       |
+|  \ \  \|\  \ \  \ \  \ \  \_\\ \ \  \|\  \ \  \_|\ \  \ \  \ \|____|\  \      |
+|   \ \_______\ \__\ \__\ \_______\ \_______\ \_______\  \ \__\  ____\_\  \     |
+|    \|_______|\|__|\|__|\|_______|\|_______|\|_______|   \|__| |\_________\    |
+|                                                               \|_________|    |
++===============================================================================+
+
+[Debug  :TempestGadgets] Loading Patches...
+[Debug  :TempestGadgets] Loading Daemons...
+[Debug  :TempestGadgets] Loading Executables...
+[Debug  :TempestGadgets] Loading Actions...
+[Debug  :TempestGadgets] Loading Events...
+[Debug  :TempestGadgets] Loading Commands...
+[Info   :   BepInEx] Loading [SRPortToolkit 0.1.0]
+[Debug  :SRPortToolkit] Loading Ports...
+[Debug  :SRPortToolkit] Port 'IMAP' (143) registered successfully
+[Debug  :SRPortToolkit] Port 'DNS' (53) registered successfully
+[Debug  :SRPortToolkit] Port 'RPC' (135) registered successfully
+[Debug  :SRPortToolkit] Port 'Redis' (6379) registered successfully
+[Debug  :SRPortToolkit] Port 'NFS' (2049) registered successfully
+[Debug  :SRPortToolkit] Port 'IDAP' (389) registered successfully
+[Debug  :SRPortToolkit] Loading Ports Complete
+[SRPortToolkit] Loading Complete
+//////////////////////////////////// ZQG //////////////////////////////////
+/////////////////////////////////// SR.OS ////////////////////////////////////
+//////////////////////////////  SRPortToolkit  /////////////////////////////////
+//////////////////////////// SR.OS OverLapping /////////////////////////////////
+[Info   :   BepInEx] Loading [HacknetFontReplace 1.0.2]
+[Info   :   BepInEx] Loading [PassPort Patch 1.0.0]
+PassPortPlugin v1.0.0 loaded!
+[Message:   BepInEx] Chainloader startup complete
+[KE-CN] Prefix injected from Extensions/tmod\KE-IRClogs_CN.txt
+[ServerPlugin] Server mode activated.
+[ServerPlugin] Connecting to console...
+[ServerPlugin] Console confirmed. Ready.
+[ServerPlugin] ← Console: LAUNCH_SERVER:a:a:a:9050
+[ServerPlugin] Process msg: LAUNCH_SERVER:a:a:a:9050
+[ServerPlugin]   cmd='LAUNCH_SERVER' parts=5
+[HandleLaunch] parts.Length=5
+[HandleLaunch] server=a account=a port=9050
+[HandleLaunch] ScreenManager=True
+[HandleLaunch] Calling CreateNewAccountForExtensionAndStart...
+[CreateAccount] called: user=a pass=a
+[CreateAccount]   currentScreen=
+[CreateAccount]   ActiveExtensionInfo=mod test des
+[CreateAccount]   IsServerLaunch=True
+[CreateAccount]   Settings.IsInExtensionMode=True
+[CreateAccount] SERVER LAUNCH PATH
+HHBS-Folderpath: E:\documents/My Games/HacknetPathfinder\Accounts\mod_test_des\HHBS
+[CreateAccount]   filePath=save_a.xml
+[KE-CN] Prefix injected from Extensions/tmod\KE-IRClogs_CN.txt
+[Warning:PathfinderAPI] 2 has port 12345, which does not exist
+[Warning:PathfinderAPI] testNode has port 123, which does not exist
+SecurityControl for testNode: Original=9, CurrentLowered=0, MaxLowerable=10, Pass=123
+SecurityControl for delayNode: Original=2, CurrentLowered=0, MaxLowerable=3, Pass=NONE
+Booting up -- checking libs
+Libs loaded successfully
+Spawning thread for command connect 226.58.37.85
+[Debug  :KernelExtensions] Infection flag found: null
+[SetNodeIcon] KE-Images.ini 预加载完成: 2 个
+RTSP-CORE: OS加载内容补丁触发
+[CreateAccount]   New OS added. currentInstance=True
+[CreateAccount] called: user=a pass=a
+[CreateAccount]   currentScreen=
+[CreateAccount]   ActiveExtensionInfo=mod test des
+[CreateAccount]   IsServerLaunch=False
+[CreateAccount]   Settings.IsInExtensionMode=True
+[HandleLaunch] CreateNewAccountForExtensionAndStart returned.
+[Info   :HacknetFontReplace] try load HacknetHotReplace.resources from memory resource 
+[Error  :HacknetFontReplace] error to load HacknetHotReplace.resources, not find.
+[Info   :HacknetFontReplace] try load HacknetHotReplace.resources from memory resource 
+[Error  :HacknetFontReplace] error to load HacknetHotReplace.resources, not find.
+[Info   :HacknetFontReplace] try load HacknetHotReplace.resources from memory resource 
+[Error  :HacknetFontReplace] error to load HacknetHotReplace.resources, not find.
+[Info   :HacknetFontReplace] try load HacknetHotReplace.resources from memory resource 
+[Error  :HacknetFontReplace] error to load HacknetHotReplace.resources, not find.
+[Info   :HacknetFontReplace] try load HacknetHotReplace.resources from memory resource 
+[Error  :HacknetFontReplace] error to load HacknetHotReplace.resources, not find.
+[Info   :HacknetFontReplace] try load HacknetHotReplace.resources from memory resource 
+[Error  :HacknetFontReplace] error to load HacknetHotReplace.resources, not find.
+[Info   :HacknetFontReplace] try load HacknetHotReplace.resources from memory resource 
+[Error  :HacknetFontReplace] error to load HacknetHotReplace.resources, not find.
+[Info   :HacknetFontReplace] try load HacknetHotReplace.resources from memory resource 
+[Error  :HacknetFontReplace] error to load HacknetHotReplace.resources, not find.
+Spawning thread for command save!(SJN!*SNL8vAewew57WewJdwl89(*4;;;&!)@&(ak'^&#@J3KH@!*
+RTSP-CORE: 确保EXE启动检查
+RTSP-CORE: 确保启动RtSpServiceEXE
+[RealFileExistsGoal] Checking file: Extensions/tmod/Programmes/DHS-T/ExFiles/TEST.pp
+[RealFileExistsGoal] Checking file: Extensions/tmod/Programmes/DHS-T/ExFiles/TEST.pp
+Saving 0 used passports...
+[CreateFileAction] Resolved file path: Extensions/tmod/reports/report.pdf
+Spawning thread for command save!(SJN!*SNL8vAewew57WewJdwl89(*4;;;&!)@&(ak'^&#@J3KH@!*
+Spawning thread for command save!(SJN!*SNL8vAewew57WewJdwl89(*4;;;&!)@&(ak'^&#@J3KH@!*
+Session Saved
+Saving 0 used passports...
+Session Saved
+[Error  :   Hacknet] System.Exception: Exception occurred during threaded execute ---> System.IO.IOException: The process cannot access the file 'D:\Steam\steamapps\common\Hacknet\Settings.txt' because it is being used by another process.
+   at System.IO.__Error.WinIOError(Int32 errorCode, String maybeFullPath) IL<0x01D7>
+   at System.IO.FileStream.Init(String path, FileMode mode, FileAccess access, Int32 rights, Boolean useRights, FileShare share, Int32 bufferSize, FileOptions options, SECURITY_ATTRIBUTES secAttrs, String msgPath, Boolean bFromProxy, Boolean useLongPath, Boolean checkHost) IL<0x03A0>
+   at System.IO.FileStream..ctor(String path, FileMode mode, FileAccess access, FileShare share, Int32 bufferSize, FileOptions options, String msgPath, Boolean bFromProxy, Boolean useLongPath, Boolean checkHost) IL<0x000E>
+   at System.IO.StreamWriter.CreateFile(String path, Boolean append, Boolean checkHost) IL<0x0008>
+   at System.IO.StreamWriter..ctor(String path, Boolean append, Encoding encoding, Int32 bufferSize, Boolean checkHost) IL<0x003B>
+   at System.IO.StreamWriter..ctor(String path) IL<0x0000>
+   at Hacknet.Utils.writeToFile(String data, String filename) IL<0x0001>
+   at Hacknet.SettingsLoader.writeStatusFile() IL<0x01F2>
+   at DMD<Hacknet.ProgramRunner::ExecuteProgram>(Object os_object, String[] arguments) IL<0xFFFFFFFF>
+   at DMD<Hacknet.OS::threadExecute>(OS this, Object threadText) IL<0xFFFFFFFF>
+   --- End of inner exception stack trace ---
+Spawning thread for command connect 176.94.125.209
+Spawning thread for command ls
+Spawning thread for command login
+Spawning thread for command 
+Spawning thread for command fh
+Spawning thread for command ls
+Spawning thread for command cd runtime
+Spawning thread for command cd ..
+Spawning thread for command cd sys
+Spawning thread for command rm x-server.sys
+Spawning thread for command cd ..
+Spawning thread for command cd bin
