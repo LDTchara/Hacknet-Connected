@@ -37,11 +37,11 @@ public class ExtraEventsPlugin : HacknetPlugin
         PlayerEventAPI.OnFirewallChanged += (comp, os, state, fw) =>
             Console.WriteLine($"[EVENTEST] Firewall: {comp.idName} state={state}");
 
-        PlayerEventAPI.OnNodeVisibilityChanged += (comp, os, vis) =>
-            Console.WriteLine($"[EVENTEST] NodeVis: {comp.idName} vis={vis}");
-
-        PlayerEventAPI.OnNodeIPChanged += (comp, os, old, nw) =>
-            Console.WriteLine($"[EVENTEST] NodeIP: {comp.idName} {old}->{nw}");
+        // 以下两个订阅导致刷屏（Hacknet 对所有远程节点做 IP 轮转，每秒触发数十次）
+        // PlayerEventAPI.OnNodeVisibilityChanged += (comp, os, vis) =>
+        //     Console.WriteLine($"[EVENTEST] NodeVis: {comp.idName} vis={vis}");
+        // PlayerEventAPI.OnNodeIPChanged += (comp, os, old, nw) =>
+        //     Console.WriteLine($"[EVENTEST] NodeIP: {comp.idName} {old}->{nw}");
 
         PlayerEventAPI.OnActionTriggered += (act, os, type, xml) =>
             Console.WriteLine($"[EVENTEST] Action: type={type}");

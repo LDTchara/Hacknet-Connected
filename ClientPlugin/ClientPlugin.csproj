@@ -7,37 +7,16 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>CS8500</NoWarn>
     <AnalysisMode>Recommended</AnalysisMode>
+      <OutputPath>..\Output\ClientPlugin\</OutputPath>
+      <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="HacknetHotReplace-master\**" />
-    <Compile Remove="HacknetServerTerminal\**" />
-    <Compile Remove="ServerClientEventsMod\**" />
-    <Compile Remove="ServerConsole\**" />
-    <Compile Remove="TAXCore Online\**" />
-    <Compile Remove="TestClient\**" />
-    <Compile Remove="hacknet-re\**" />
-    <EmbeddedResource Remove="HacknetHotReplace-master\**" />
-    <EmbeddedResource Remove="HacknetServerTerminal\**" />
-    <EmbeddedResource Remove="ServerClientEventsMod\**" />
-    <EmbeddedResource Remove="ServerConsole\**" />
-    <EmbeddedResource Remove="TAXCore Online\**" />
-    <EmbeddedResource Remove="TestClient\**" />
-    <EmbeddedResource Remove="hacknet-re\**" />
-    <None Remove="HacknetHotReplace-master\**" />
-    <None Remove="HacknetServerTerminal\**" />
-    <None Remove="ServerClientEventsMod\**" />
-    <None Remove="ServerConsole\**" />
-    <None Remove="TAXCore Online\**" />
-    <None Remove="TestClient\**" />
-    <None Remove="hacknet-re\**" />
-  </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Costura.Fody" Version="6.2.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+	  <PackageReference Include="Costura.Fody" Version="6.2.0">
+		  <PrivateAssets>all</PrivateAssets>
+	  </PackageReference>
+
     <PackageReference Include="LiteNetLib" Version="1.3.5" />
   </ItemGroup>
 
@@ -78,10 +57,10 @@
       <HintPath>libs\PathfinderAPI.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="ServerClientEventsMod">
-      <HintPath>libs\ServerClientEventsMod.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <ProjectReference Include="..\ServerClientEventsMod\ServerClientEventsMod.csproj">
+      <Private>true</Private>
+    </ProjectReference>
+
   </ItemGroup>
 
 </Project>

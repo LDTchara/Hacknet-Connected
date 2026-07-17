@@ -43,6 +43,9 @@ public class ClientPluginMain : HacknetPlugin
     /// <summary>存档文件是否已完整接收，GameLauncher 等待此标志</summary>
     public static volatile bool IsSaveFileReady = false;
 
+    /// <summary>服务端是否有该玩家的存档（HELLO 握手时由 HAS_SAVE/NO_SAVE 设置）</summary>
+    public static volatile bool HasServerSave = false;
+
     private static Harmony? _harmony;
 
     public override bool Load()

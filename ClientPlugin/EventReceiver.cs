@@ -31,6 +31,9 @@ internal static class EventReceiver
     /// <summary>服务端文件清单（SyncStart 时构建，SyncEnd 时清理多余文件）</summary>
     private static readonly HashSet<string> _serverFileSet = new();
 
+    /// <summary>SAVE_REQUIRED 冷却（防 exit 时重复上传）</summary>
+    private static DateTime _lastSaveUpload = DateTime.MinValue;
+
     public static void HandleMessage(string msg)
     {
         try
@@ -53,8 +56,8 @@ internal static class EventReceiver
             switch (eventType)
             {
                 case "FILE": HandleFileEvent(paramStr); break;
-                case "NODE_VIS": HandleNodeVisibility(paramStr); break;
-                case "NODE_IP": HandleNodeIPChange(paramStr); break;
+                //case "NODE_VIS": HandleNodeVisibility(paramStr); break;
+                //case "NODE_IP": HandleNodeIPChange(paramStr); break;
                 case "FIREWALL": HandleFirewallEvent(paramStr); break;
                 case "PROXY": HandleProxyEvent(paramStr); break;
                 case "PORT": HandlePortEvent(paramStr); break;
@@ -63,6 +66,9 @@ internal static class EventReceiver
                 case "WORLD_SEED":
                     // 通过 EVENT: 路径到达的世界种子消息，重建原始格式交给系统处理器
                     HandleSystemMessage($"WORLD_SEED:{paramStr}");
+                    break;
+                case "SAVE_REQUIRED":
+                    HandleSystemMessage("SAVE_REQUIRED");
                     break;
                 default:
                     Console.WriteLine($"[EventRecv] Unknown event type: {eventType}");
@@ -92,6 +98,33 @@ internal static class EventReceiver
         {
             var listStr = msg.Substring("PLAYER_LIST:".Length);
             Console.WriteLine($"[EventRecv] Online players: {listStr}");
+        }
+
+        // ── 玩家数据同步（来自服务端 HELLO 握手） ──
+        // PLAYER_DATA:{id}:{name}
+        else if (msg.StartsWith("PLAYER_DATA:"))
+        {
+            var rest = msg.Substring("PLAYER_DATA:".Length);
+            var parts = rest.Split(':');
+            if (parts.Length >= 2 && int.TryParse(parts[0], out int pId))
+            {
+                ClientNetworkManager.PlayerId = pId;
+                string pName = parts[1];
+                Console.WriteLine($"[EventRecv] PLAYER_DATA: Id={pId} Name={pName}");
+                PlayerDataManager.CreateOrUpdate(pId, pName);
+            }
+        }
+
+        // ── 服务端是否有该玩家存档（HELLO 握手时确定） ──
+        else if (msg == "HAS_SAVE")
+        {
+            ClientPluginMain.HasServerSave = true;
+            Console.WriteLine("[EventRecv] HAS_SAVE: 服务端有该玩家存档，等待传输...");
+        }
+        else if (msg == "NO_SAVE")
+        {
+            ClientPluginMain.HasServerSave = false;
+            Console.WriteLine("[EventRecv] NO_SAVE: 新玩家，跳过存档传输");
         }
 
         // ── 服务端存档列表（供客户端对比） ──
@@ -208,6 +241,8 @@ internal static class EventReceiver
                 else
                 {
                     Console.WriteLine($"[EventRecv] WARNING: S_FILE_END but only {ClientPluginMain.PendingSaveChunks.Count}/{total} chunks received");
+                    // 写标记文件：告知 GameLauncher 上次存档传输不完整
+                    MarkSaveIncomplete();
                 }
             }
         }
@@ -232,73 +267,19 @@ internal static class EventReceiver
         // ── 服务端请求上传存档 ──
         else if (msg == "SAVE_REQUIRED")
         {
+            if ((DateTime.Now - _lastSaveUpload).TotalSeconds < 10)
+            {
+                Console.WriteLine("[EventRecv] SAVE_REQUIRED 忽略（10秒冷却）");
+                return;
+            }
+            _lastSaveUpload = DateTime.Now;
             Console.WriteLine("[EventRecv] Server requested save upload!");
-            try
-            {
-                // 1. 先强制保存当前游戏状态
-                var os = OS.currentInstance;
-                if (os != null)
-                {
-                    string saveUser = os.SaveGameUserName;
-                    if (!string.IsNullOrEmpty(saveUser))
-                    {
-                        // 触发游戏保存（确保存档文件是最新的）
-                        os.saveGame();
-                        Console.WriteLine("[EventRecv] OS forced save done");
 
-                        // 通过 SaveFileManager 读取存档文件
-                        using var stream = SaveFileManager.GetSaveReadStream(saveUser);
-                        if (stream != null)
-                        {
-                            var memStream = new MemoryStream();
-                            stream.CopyTo(memStream);
-                            var data = memStream.ToArray();
-                            var b64 = Convert.ToBase64String(data);
-                            string username = ClientPluginMain.SelectedAccount?.GameUsername ?? saveUser.Replace("save_", "").Replace(".xml", "");
-
-                            // 分块发送，避免单条 LiteNetLib 消息过大
-                            int chunkSize = 60000;
-                            int total = (b64.Length + chunkSize - 1) / chunkSize;
-                            for (int i = 0; i < total; i++)
-                            {
-                                int start = i * chunkSize;
-                                int len = Math.Min(chunkSize, b64.Length - start);
-                                var chunk = b64.Substring(start, len);
-                                ClientNetworkManager.Send($"SAVE_DATA_CHUNK:{i}:{total}:{username}:{chunk}");
-                            }
-                            ClientNetworkManager.Send($"SAVE_DATA_DONE:{total}");
-                            Console.WriteLine($"[EventRecv] Save uploaded ({data.Length} bytes, {total} chunks)");
-                            return;
-                        }
-                    }
-                }
-
-                // 2. 退回到 SelectedAccount 的路径
-                var path = ClientPluginMain.SelectedAccount?.SaveFilePath;
-                if (!string.IsNullOrEmpty(path) && File.Exists(path))
-                {
-                    var bytes = File.ReadAllBytes(path);
-                    var b64 = Convert.ToBase64String(bytes);
-                    string user2 = ClientPluginMain.SelectedAccount.GameUsername ?? "unknown";
-                    int cs2 = 60000;
-                    int t2 = (b64.Length + cs2 - 1) / cs2;
-                    for (int i = 0; i < t2; i++)
-                    {
-                        int start = i * cs2;
-                        int len = Math.Min(cs2, b64.Length - start);
-                        ClientNetworkManager.Send($"SAVE_DATA_CHUNK:{i}:{t2}:{user2}:{b64.Substring(start, len)}");
-                    }
-                    ClientNetworkManager.Send($"SAVE_DATA_DONE:{t2}");
-                    Console.WriteLine($"[EventRecv] Save uploaded ({bytes.Length} bytes, {t2} chunks, from SelectedAccount path)");
-                    return;
-                }
-
-                Console.WriteLine("[EventRecv] No save file to upload (no file path set)");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[EventRecv] Save upload failed: {ex.Message}");
-            }
+            // 委托给 EventForwarderClient.TriggerSaveUpload()
+            // 它负责 os.saveGame() + 读取 + 分块 + 发送。
+            // 不在此处另做上传——否则 os.saveGame() 触发 OnSaveGame
+            // 回调会再起一次上传，导致服务端收到两份存档。
+            EventForwarderClient.TriggerSaveUpload();
         }
 
         // ── 世界种子（含随机状态+子种子计数器） ──
@@ -362,11 +343,45 @@ internal static class EventReceiver
 
         string action = parts[0];
         string compID = parts[1];
-        string filePath = parts[2];
+        string filePath = parts.Length > 2 ? System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[2])) : "";
         string sourceIP = parts[3];
-        string content = parts.Length > 4 ? parts[4] : null;
+        string raw = parts.Length > 4 ? parts[4] : null;
+            string content = raw != null ? System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(raw)) : null;
         string fromName = parts.Length > 5 ? parts[5] : null;
         string toName = parts.Length > 6 ? parts[6] : null;
+
+        // SyncStart/SyncEnd 是全局操作，不需要特定 Computer
+        if (action == "SyncStart")
+        {
+            _serverFileSet.Clear();
+            _isSyncing = true;
+            Console.WriteLine("[EventRecv] File sync started (quiet mode)");
+            return;
+        }
+
+        if (action == "SyncEnd")
+        {
+            _isSyncing = false;
+            // 遍历所有 Computer，删除多余的客户端文件
+            var os = Hacknet.OS.currentInstance;
+            if (os?.netMap?.nodes != null)
+            {
+                foreach (var node in os.netMap.nodes)
+                {
+                    if (node?.files?.root == null) continue;
+                    var nodeFiles = new HashSet<string>();
+                    CollectFiles(node, "", nodeFiles);
+                    foreach (var clientFile in nodeFiles)
+                    {
+                        if (!_serverFileSet.Contains(clientFile))
+                            RemoveFileFromComputer(node, clientFile);
+                    }
+                }
+            }
+            Console.WriteLine("[EventRecv] File sync ended. Cleaned extra files.");
+            _serverFileSet.Clear();
+            return;
+        }
 
         var comp = FindComputer(compID);
         if (comp == null)
@@ -378,29 +393,6 @@ internal static class EventReceiver
 
         switch (action)
         {
-            case "SyncStart":
-                // 开始全量文件同步：清空清单，进入静默模式
-                _serverFileSet.Clear();
-                _isSyncing = true;
-                Console.WriteLine("[EventRecv] File sync started (quiet mode)");
-                return;
-
-            case "SyncEnd":
-                // 同步结束：删除客户端多余的文件
-                _isSyncing = false;
-                var currentFiles = new HashSet<string>();
-                CollectFiles(comp, "", currentFiles);
-                foreach (var clientFile in currentFiles)
-                {
-                    if (!_serverFileSet.Contains(clientFile))
-                    {
-                        RemoveFileFromComputer(comp, clientFile);
-                    }
-                }
-                Console.WriteLine($"[EventRecv] File sync ended. Removed {currentFiles.Count - _serverFileSet.Count} extra files.");
-                _serverFileSet.Clear();
-                return;
-
             case "FileAdded":
                 if (_isSyncing)
                 {
@@ -483,7 +475,7 @@ internal static class EventReceiver
         if (comp == null) return;
 
         comp.ip = newIP;
-        Console.WriteLine($"[EventRecv] IP changed: {compID} {oldIP} → {newIP}");
+        //Console.WriteLine($"[EventRecv] IP changed: {compID} {oldIP} → {newIP}");
     }
 
     // ── 防火墙状态 ──
@@ -684,7 +676,7 @@ internal static class EventReceiver
 
     private static void UpdateFileContent(Computer comp, string filePath, string? content)
     {
-        if (content == null) return;
+        if (string.IsNullOrEmpty(content)) return;
         try
         {
             var parts = filePath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
@@ -827,5 +819,118 @@ internal static class EventReceiver
         }
         result[expected - 1] = remaining;
         return result;
+    }
+
+    // ─── 存档不完整标记 ───
+
+    /// <summary>写入标记文件：上次服务端存档传输不完整</summary>
+    private static void MarkSaveIncomplete()
+    {
+        try
+        {
+            string? dir = GetStorageDir();
+            if (dir == null) return;
+            Directory.CreateDirectory(dir);
+            string marker = Path.Combine(dir, "INCOMPLETE");
+            File.WriteAllText(marker, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            Console.WriteLine($"[EventRecv] Incomplete marker written: {marker}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EventRecv] Marker write error: {ex.Message}");
+        }
+    }
+
+    /// <summary>检查并清除标记文件</summary>
+    public static bool CheckAndClearIncompleteMarker()
+    {
+        try
+        {
+            string? dir = GetStorageDir();
+            if (dir == null) return false;
+            string marker = Path.Combine(dir, "INCOMPLETE");
+            if (File.Exists(marker))
+            {
+                File.Delete(marker);
+                Console.WriteLine($"[EventRecv] Incomplete marker found and cleared: {marker}");
+                return true;
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EventRecv] Marker check error: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static string? GetStorageDir()
+    {
+        var server = ClientPluginMain.SelectedServer;
+        var account = ClientPluginMain.SelectedAccount;
+        if (server == null || account == null) return null;
+        string storageDir = Path.Combine(
+            ClientPluginMain.EnvPath, "OnlineSaves", "Client", server.HostName);
+        return storageDir;
+    }
+
+    /// <summary>当服务端存档不完整时，将本地存档上传到服务端</summary>
+    public static void UploadLocalSaveToServer()
+    {
+        try
+        {
+            byte[]? data = null;
+            string username = "unknown";
+
+            var os = OS.currentInstance;
+            if (os != null && !string.IsNullOrEmpty(os.SaveGameUserName))
+            {
+                // 遍历所有 StorageMethod 找存档（修复 [0] 指向不确定的问题）
+                os.saveGame();
+                using var stream = SaveFileHelper.GetReadStream(os.SaveGameUserName);
+                if (stream != null)
+                {
+                    var mem = new System.IO.MemoryStream();
+                    stream.CopyTo(mem);
+                    data = mem.ToArray();
+                    username = os.SaveUserAccountName ?? os.SaveGameUserName.Replace("save_", "").Replace(".xml", "");
+                }
+            }
+
+            if (data == null)
+            {
+                // 游戏未运行：从文件读取（HHBS 路径）
+                var server = ClientPluginMain.SelectedServer;
+                var account = ClientPluginMain.SelectedAccount;
+                if (account != null && !string.IsNullOrEmpty(account.SaveFilePath) && File.Exists(account.SaveFilePath))
+                {
+                    data = File.ReadAllBytes(account.SaveFilePath);
+                    username = account.GameUsername ?? "unknown";
+                }
+            }
+
+            if (data == null || data.Length == 0)
+            {
+                Console.WriteLine("[EventRecv] No local save data to upload");
+                return;
+            }
+
+            var b64 = Convert.ToBase64String(data);
+            int chunkSize = 60000;
+            int total = (b64.Length + chunkSize - 1) / chunkSize;
+            int upSeq = EventForwarderClient.GetNextUploadSeq();
+            for (int i = 0; i < total; i++)
+            {
+                int start = i * chunkSize;
+                int len = Math.Min(chunkSize, b64.Length - start);
+                ClientNetworkManager.Send($"SAVE_DATA_CHUNK:{i}:{total}:{upSeq}:{username}:{b64.Substring(start, len)}");
+            }
+            ClientNetworkManager.Send($"SAVE_DATA_DONE:{total}:{upSeq}");
+            Console.WriteLine($"[EventRecv] Local save uploaded to server: {data.Length} bytes ({total} chunks)");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EventRecv] Local save upload failed: {ex.Message}");
+        }
     }
 }

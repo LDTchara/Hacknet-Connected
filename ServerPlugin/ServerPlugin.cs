@@ -98,47 +98,19 @@ internal static class CreateAccountPatch
         if (filePath == null)
         {
             SaveFileManager.AddUser(username, pass);
-            try
-            {
-                var storage = SaveFileManager.StorageMethods?[0];
-                if (storage != null)
-                    storage.GetSaveManifest().Save(storage);
-            }
-            catch { }
+            // 冗余写入所有 StorageMethod（修复 [0] 指向不确定的问题）
+            SaveFileHelper.SaveManifestToAll();
             filePath = SaveFileManager.GetFilePathForLogin(username, pass) ?? "";
         }
 
         // ════════════════════════════════════════════════════════
-        // 调试：扫描所有可能的存档路径
+        // 调试：遍历所有 StorageMethod + 扫描文件系统目录
         // ════════════════════════════════════════════════════════
-        Console.WriteLine("═══════════ SAVE DEBUG ═══════════");
-        Console.WriteLine($"[CreateAccount] filePath (from GetFilePathForLogin) = '{filePath}'");
+        Console.WriteLine($"[CreateAccount] Save file: (from GetFilePathForLogin) = '{filePath}'");
+        SaveFileHelper.DebugPrintAllStorages(filePath);
 
         try
         {
-            var storage0 = SaveFileManager.StorageMethods?[0];
-            Console.WriteLine($"[CreateAccount] StorageMethods[0] type = {storage0?.GetType().FullName}");
-
-            if (storage0 != null)
-            {
-                // 反射读 FullFolderPath
-                var ffpProp = storage0.GetType().GetProperty("FullFolderPath",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                string fullFolder = "";
-                if (ffpProp != null)
-                    fullFolder = ffpProp.GetValue(storage0)?.ToString() ?? "";
-                Console.WriteLine($"[CreateAccount] Storage FullFolderPath = '{fullFolder}'");
-
-                if (!string.IsNullOrEmpty(filePath))
-                {
-                    // FileExists 实际检查的路径
-                    bool feResult = storage0.FileExists(filePath);
-                    Console.WriteLine($"[CreateAccount] FileExists('{filePath}') = {feResult}");
-                    Console.WriteLine($"[CreateAccount]   Full path checked = '{fullFolder}{filePath}'");
-                    Console.WriteLine($"[CreateAccount]   File.Exists(full) = {File.Exists(fullFolder + filePath)}");
-                }
-            }
-
             // 扫描各种可能的存档目录
             string personal = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
             string extName = ExtensionLoader.ActiveExtensionInfo?.GetFoldersafeName() ?? "?";
@@ -176,8 +148,9 @@ internal static class CreateAccountPatch
         // ════════════════════════════════════════════════════════
         // 遵循原生 Login 按钮流程
         // ════════════════════════════════════════════════════════
+        // 遍历所有 StorageMethod 找有效存档（修复 [0] 指向不确定的问题）
         bool saveExists = !string.IsNullOrEmpty(filePath)
-            && SaveFileManager.StorageMethods?[0].FileExists(filePath) == true;
+            && SaveFileHelper.SaveExists(filePath);
 
         if (saveExists)
         {

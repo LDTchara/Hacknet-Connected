@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
 using System.Threading;
@@ -31,6 +32,24 @@ internal class Program
         return "PIPE=已连接+已握手 OK";
     }
 
+    /// <summary>Mod 回复缓存（供 CommandHandler 同步等待）</summary>
+    private static volatile string? _pendingModReply;
+
+    /// <summary>发送消息并同步等待 Mod 回复（阻塞当前线程，最多等 5 秒）</summary>
+    public static string? SendToModAndWait(string msg)
+    {
+        _pendingModReply = null;
+        _ = SendToMod(msg, false);
+        for (int i = 0; i < 50; i++)
+        {
+            if (_pendingModReply != null) break;
+            Thread.Sleep(100);
+        }
+        string? reply = _pendingModReply;
+        _pendingModReply = null;
+        return reply;
+    }
+
     /// <summary>终端日志文件路径（桌面 TerminLog_yyyy-MM-dd.txt）</summary>
     private static readonly string _logPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
@@ -45,6 +64,116 @@ internal class Program
                 $"{DateTime.Now:HH:mm:ss.fff} [{tag}] {msg}{Environment.NewLine}");
         }
         catch { }
+    }
+
+    /// <summary>Pipe 写操作信号量（防并发写导致管道缓冲区满）</summary>
+    private static readonly SemaphoreSlim _pipeWriteSemaphore = new(1, 1);
+
+    /// <summary>因背压被推迟的事件队列（超时丢弃→入队，等管道空闲后重试）</summary>
+    private static readonly ConcurrentQueue<string> _deferredEventQueue = new();
+
+    /// <summary>推迟事件总计数（用于控制台显示）</summary>
+    internal static int DeferredEventCount => _deferredEventQueue.Count;
+
+    /// <summary>一次自动重试最多发多少条（防止再次引发背压）</summary>
+    private const int MaxAutoRetryPerWrite = 50;
+
+    /// <summary>
+    /// 向模组发送消息（发后即忘，不阻塞 PipeListenLoop）。
+    /// 用于高频事件转发——不设 _pipeBusy、不等回复。
+    /// 信号量串行化写入；超时时入队等重试，不丢弃。
+    /// 写入成功后自动消耗部分推迟队列。
+    /// </summary>
+    public static async Task SendToModFireForget(string msg)
+    {
+        if (_pipeWriter == null) return;
+
+        // 背压保护：信号量等太久就入推迟队列
+        bool acquired = await _pipeWriteSemaphore.WaitAsync(500);
+        if (!acquired)
+        {
+            _deferredEventQueue.Enqueue(msg);
+            return;
+        }
+
+        try
+        {
+            // 发送本次消息
+            await _pipeWriter.WriteLineAsync(msg);
+            await _pipeWriter.FlushAsync();
+
+            // 管道空闲了，自动消耗一部分推迟队列
+            int retried = 0;
+            while (retried < MaxAutoRetryPerWrite && _deferredEventQueue.TryDequeue(out var deferred))
+            {
+                await _pipeWriter.WriteLineAsync(deferred);
+                await _pipeWriter.FlushAsync();
+                retried++;
+            }
+            if (retried > 0)
+                Console.WriteLine($"[Pipe] 自动重试 {retried} 条推迟事件，剩余 {_deferredEventQueue.Count}");
+        }
+        catch (Exception ex)
+        {
+            // 写入失败 → 放回队列重试
+            _deferredEventQueue.Enqueue(msg);
+            Console.WriteLine($"[Pipe] SendToModFireForget error: {ex.Message}，事件已入重试队列");
+        }
+        finally
+        {
+            _pipeWriteSemaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// 强制重试所有推迟事件（供 retryevents 指令调用）。
+    /// 返回实际重试的条数。
+    /// </summary>
+    public static int RetryDeferredEvents()
+    {
+        if (_pipeWriter == null) return 0;
+
+        int count = _deferredEventQueue.Count;
+        if (count == 0)
+        {
+            Console.WriteLine("[Pipe] 推迟队列为空，无需重试");
+            return 0;
+        }
+
+        // 获取信号量，防止与 SendToModFireForget 并发写 Pipe
+        if (!_pipeWriteSemaphore.Wait(2000))
+        {
+            Console.WriteLine("[Pipe] 获取写信号量超时(2s)，请稍后再试");
+            return 0;
+        }
+
+        int retried = 0;
+        try
+        {
+            while (_deferredEventQueue.TryDequeue(out var msg))
+            {
+                try
+                {
+                    _pipeWriter.WriteLine(msg);
+                    _pipeWriter.Flush();
+                    retried++;
+                }
+                catch (Exception ex)
+                {
+                    // 重试失败再放回去
+                    _deferredEventQueue.Enqueue(msg);
+                    Console.WriteLine($"[Pipe] 重试失败: {ex.Message}，剩余 {_deferredEventQueue.Count}");
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            _pipeWriteSemaphore.Release();
+        }
+
+        Console.WriteLine($"[Pipe] 手动重试 {retried}/{count} 条推迟事件，剩余 {_deferredEventQueue.Count}");
+        return retried;
     }
 
     /// <summary>
@@ -165,10 +294,12 @@ internal class Program
                 // ── 存档就绪：读盘 → 分块 → 有序广播（带进度条） ──
                 if (msg.StartsWith("SAVE_FILE_READY:"))
                 {
-                    var parts = msg.Split(':', 3);
-                    if (parts.Length == 3)
+                    // 路径含盘符(E:)，用 Split(':') 会切碎。改用 IndexOf + LastIndexOf
+                    int firstColon = msg.IndexOf(':');
+                    int lastColon = msg.LastIndexOf(':');
+                    if (firstColon > 0 && lastColon > firstColon)
                     {
-                        string filePath = parts[1];
+                        string filePath = msg.Substring(firstColon + 1, lastColon - firstColon - 1);
                         Console.WriteLine($"[Pipe] SAVE_FILE_READY: {filePath}");
 
                         try
@@ -179,6 +310,18 @@ internal class Program
                                 string b64 = Convert.ToBase64String(data);
                                 int chunkSize = 60000;
                                 int total = (b64.Length + chunkSize - 1) / chunkSize;
+
+                                // 存档到 Storage/{serverName}/
+                                string serverName = CommandHandler.CurrentServerName;
+                                if (!string.IsNullOrEmpty(serverName))
+                                {
+                                    string storageDir = Path.Combine("Storage", serverName);
+                                    Directory.CreateDirectory(storageDir);
+                                    string saveName = Path.GetFileName(filePath).Replace(".bin", ".xml");
+                                    string storagePath = Path.Combine(storageDir, saveName);
+                                    File.WriteAllBytes(storagePath, data);
+                                    Console.WriteLine($"[Pipe] Archived to {storagePath}");
+                                }
 
                                 Console.WriteLine($"[Pipe] File read: {data.Length} bytes, {total} chunks");
 
@@ -219,12 +362,25 @@ internal class Program
                     continue;
                 }
 
+                // Mod 回复（供应程序同步等待）
+                if (msg.StartsWith("SAVE_CONFLICT:") || msg.StartsWith("DELETE_SAVE_CONFLICT:") ||
+                    msg.StartsWith("ACCOUNT_SAVE_EXISTS:") || msg.StartsWith("ACCOUNT_SAVE_CREATED:"))
+                {
+                    _pendingModReply = msg;
+                    continue;
+                }
+
                 Console.WriteLine("[Pipe] " + msg);
 
                 // 广播 EVENT: / WORLD_SEED: / SAVE_LIST: 消息给客户端
+                // 独立 try-catch：Broadcast 内部可能因日志文件竞争抛 IOException，不能杀死循环
                 if (msg.StartsWith("EVENT:") || msg.StartsWith("WORLD_SEED:") || msg.StartsWith("SAVE_LIST:"))
                 {
-                    NetworkManager.Broadcast(msg);
+                    try { NetworkManager.Broadcast(msg); }
+                    catch (Exception broadcastEx)
+                    {
+                        Console.WriteLine($"[Pipe] Broadcast error (非致命): {broadcastEx.Message}");
+                    }
                 }
             }
         }

@@ -27,15 +27,15 @@ internal static class EventForwarder
             string contentPart = "";
             if (e.Content != null && (e.Action == FileSystemAction.FileAdded || e.Action == FileSystemAction.FileContentChanged))
             {
-                string c = e.Content.Length > 8000 ? e.Content.Substring(0, 8000) + "...[TRUNCATED]" : e.Content;
-                contentPart = $":{c}";
+                contentPart = $":{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(e.Content ?? ""))}";
             }
 
             string movePart = "";
             if (e.Action == FileSystemAction.FileMoved && e.FromName != null && e.ToName != null)
                 movePart = $":{e.FromName}:{e.ToName}";
 
-            var msg = $"EVENT:FILE:{e.Action}:{e.Computer?.idName}:{e.Path}:{e.SourceIP}{movePart}{contentPart}";
+            var encodedPath = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(e.Path ?? ""));
+            var msg = $"EVENT:FILE:{e.Action}:{e.Computer?.idName}:{encodedPath}:{e.SourceIP}{movePart}{contentPart}";
             ServerManager.SendEvent(msg);
         });
 
@@ -63,15 +63,15 @@ internal static class EventForwarder
             ServerManager.SendEvent(
                 $"EVENT:FIREWALL:{e.Computer?.idName}:{e.State}"));
 
-        // ── 节点可见性变化 ──
-        EventManager<PlayerNodeVisibilityEvent>.AddHandler(e =>
-            ServerManager.SendEvent(
-                $"EVENT:NODE_VIS:{e.Computer?.idName}:{e.Visible}"));
+        // ── 节点可见性变化（已禁用——每个节点在两 IP 间按帧来回跳，无意义） ──
+        // EventManager<PlayerNodeVisibilityEvent>.AddHandler(e =>
+        //     ServerManager.SendEvent(
+        //         $"EVENT:NODE_VIS:{e.Computer?.idName}:{e.Visible}"));
 
-        // ── 节点 IP 变化 ──
-        EventManager<PlayerNodeIPChangedEvent>.AddHandler(e =>
-            ServerManager.SendEvent(
-                $"EVENT:NODE_IP:{e.Computer?.idName}:{e.OldIP}:{e.NewIP}"));
+        // ── 节点 IP 变化（已禁用——同上，两 IP 间往返 bounce-back 已由 NetMapDetector 去重） ──
+        // EventManager<PlayerNodeIPChangedEvent>.AddHandler(e =>
+        //     ServerManager.SendEvent(
+        //         $"EVENT:NODE_IP:{e.Computer?.idName}:{e.OldIP}:{e.NewIP}"));
 
         // ── Action 触发 ──
         EventManager<PlayerActionTriggeredEvent>.AddHandler(e =>
@@ -108,6 +108,23 @@ internal static class EventForwarder
             ServerManager.SendEvent(
                 $"EVENT:COMMAND:{e.Command}:{string.Join(" ", e.Args ?? Array.Empty<string>())}"));
 
+        // ── 游戏保存事件 → 通知客户端上传存档（30 秒冷却） ──
+        ServerClientEventsMod.Events.PlayerEventAPI.OnSaveGame += OnGameSave;
+
         Console.WriteLine("[EventForwarder] Subscribed to all events.");
+    }
+
+    private static DateTime _lastSaveNotify = DateTime.MinValue;
+    private static void OnGameSave(Hacknet.OS os)
+    {
+        if (!ServerManager.IsConnected) return;
+        if (DateTime.Now - _lastSaveNotify < TimeSpan.FromSeconds(30))
+        {
+            Console.WriteLine("[EventForwarder] Save notify skipped (cooldown)");
+            return;
+        }
+        _lastSaveNotify = DateTime.Now;
+        ServerManager.SendEvent("EVENT:SAVE_REQUIRED");
+        Console.WriteLine("[EventForwarder] Save detected -> SAVE_REQUIRED broadcast");
     }
 }

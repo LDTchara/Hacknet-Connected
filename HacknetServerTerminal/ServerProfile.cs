@@ -21,6 +21,16 @@ internal class ServerProfile
         !string.IsNullOrWhiteSpace(Port) &&
         !string.IsNullOrWhiteSpace(ServerName);
 
+    /// <summary>
+    /// 配置文件保存路径：{BaseDir}/Storage/{ServerName}/{ServerName}_Profile.xml
+    /// </summary>
+    public static string GetStoragePath(string serverName)
+    {
+        string dir = Path.Combine("Storage", serverName);
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, $"{serverName}_Profile.xml");
+    }
+
     public ServerProfile Clone() => new()
     {
         HostAccountName = HostAccountName,

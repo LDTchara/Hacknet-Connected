@@ -43,6 +43,9 @@ internal static class ServerManager
     public static bool IsConnected { get; private set; }
     public static bool IsServerMode { get; set; }
 
+    /// <summary>Suppress 状态防死锁上次检查时间</summary>
+    private static DateTime? _lastSuppressCheck = null;
+
     /// <summary>Pipe 连接就绪时触发，供事件转发器注册</summary>
     public static event Action? OnPipeConnected;
 
@@ -223,6 +226,17 @@ internal static class ServerManager
     /// </summary>
     public static void ProcessPendingMessages()
     {
+        // Suppress 防死锁检测（每 30 秒检查一次）
+        if (_lastSuppressCheck == null || (DateTime.Now - _lastSuppressCheck.Value).TotalSeconds >= 30)
+        {
+            _lastSuppressCheck = DateTime.Now;
+            if (EventForwarder.Suppress)
+            {
+                Console.WriteLine("[ServerPlugin] WARNING: Suppress stuck true for >30s! Forcing reset.");
+                EventForwarder.Suppress = false;
+            }
+        }
+
         while (true)
         {
             var msg = MessageQueue.Dequeue();
@@ -265,10 +279,45 @@ internal static class ServerManager
                     HandleGetSaveList(parts);
                     break;
 
+                case "CHECK_SAVE_CONFLICT":
+                    HandleCheckSaveConflict(parts);
+                    break;
+
+                case "DELETE_SAVE_CONFLICT":
+                    HandleDeleteSaveConflict(parts);
+                    break;
+
+                case "CHECK_ACCOUNT_SAVE":
+                    HandleCheckAccountSave(parts);
+                    break;
+
+                case "CREATE_ACCOUNT_SAVE":
+                    HandleCreateAccountSave(parts);
+                    break;
+
                 case "SYNC_FILES":
                     // 后台线程，避免阻塞游戏主线程
                     string filterComp = parts.Length >= 2 ? parts[1] : "";
                     ThreadPool.QueueUserWorkItem(_ => HandleSyncFiles(filterComp));
+                    break;
+
+                case "EXIT_SERVER":
+                    Console.WriteLine("[ServerPlugin] Server exit requested, saving game...");
+                    try
+                    {
+                        var exitOs = OS.currentInstance;
+                        if (exitOs != null)
+                        {
+                            exitOs.saveGame();
+                            Console.WriteLine("[ServerPlugin] Game saved before exit");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ServerPlugin] Save before exit error: {ex.Message}");
+                    }
+                    // 触发存档写入（供终端下载到客户端）
+                    HandleGetSaveFile();
                     break;
 
                 case "EVENT":
@@ -485,18 +534,24 @@ internal static class ServerManager
         foreach (var sub in folder.folders)
         {
             string subPath = path + "/" + sub.name;
-            string msg = $"EVENT:FILE:FolderAdded:{comp.idName}:{subPath}:{comp.ip}";
+            string encodedSubPath = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(subPath ?? ""));
+                string msg = $"EVENT:FILE:FolderAdded:{comp.idName}:{encodedSubPath}:{comp.ip}";
             SendEvent(msg);
             count++;
             count += ScanAndSendFolder(comp, sub, path);
         }
 
-        // 发送文件（仅路径，不包含内容——完整文件状态由存档传输提供）
+        // 发送文件（含内容——远程测试发现不同机 Utils.random 状态不同，binary 内容不一致）
         foreach (var file in folder.files)
         {
             if (file == null || string.IsNullOrEmpty(file.name)) continue;
             string filePath = path + "/" + file.name;
-            string msg = $"EVENT:FILE:FileAdded:{comp.idName}:{filePath}:{comp.ip}";
+            string content = file.data ?? "";
+            if (content.Length > 8000)
+                content = content.Substring(0, 8000) + "...[TRUNCATED]";
+            string encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(content ?? ""));
+                string encodedPath = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(filePath ?? ""));
+                string msg = $"EVENT:FILE:FileAdded:{comp.idName}:{encodedPath}:{comp.ip}:{encoded}";
             SendEvent(msg);
             count++;
             // 每 50 个文件让出 Pipe 缓冲区，防止溢出
@@ -522,37 +577,63 @@ internal static class ServerManager
 
         try
         {
-            // 尝试通过 SaveFileManager 的 StorageMethod 定位存档路径
+            // 遍历所有 StorageMethod 找有效存档目录（修复 [0] 指向不确定的问题）
             string? saveDir = null;
-            var storage0 = SaveFileManager.StorageMethods?[0];
-            if (storage0 != null)
+            var methods = SaveFileManager.StorageMethods;
+            if (methods != null)
             {
-                // 反射读 FullFolderPath
-                var ffpProp = storage0.GetType().GetProperty("FullFolderPath",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (ffpProp != null)
+                foreach (var storage in methods)
                 {
-                    string fullFolder = ffpProp.GetValue(storage0)?.ToString() ?? "";
-                    if (!string.IsNullOrEmpty(fullFolder) && Directory.Exists(fullFolder))
-                        saveDir = fullFolder;
+                    if (storage == null) continue;
+                    try
+                    {
+                        var ffpProp = storage.GetType().GetProperty("FullFolderPath",
+                            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (ffpProp != null)
+                        {
+                            string fullFolder = ffpProp.GetValue(storage)?.ToString() ?? "";
+                            if (!string.IsNullOrEmpty(fullFolder) && Directory.Exists(fullFolder))
+                            {
+                                saveDir = fullFolder;
+                                Console.WriteLine($"[HandleGetSaveList] Using storage {storage.GetType().Name}: {saveDir}");
+                                break;
+                            }
+                        }
+                    }
+                    catch { }
                 }
             }
 
-            // 如果 SaveFileManager 路径无效，尝试 Pathfinder HHBS 路径
+            // 尝试用 Pathfinder 的 HHBS API（正确处理了 IL 补丁的路径修改）
+            if (saveDir == null)
+            {
+                try
+                {
+                    string hhbsPath = HostileHackerBreakinSequence.GetBaseDirectory();
+                    if (Directory.Exists(hhbsPath))
+                        saveDir = hhbsPath;
+                    else
+                        Console.WriteLine($"[HandleGetSaveList] HHBS API path not found: {hhbsPath}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[HandleGetSaveList] HHBS API error: {ex.Message}");
+                }
+            }
+
+            // 终极 fallback：手动拼常见的 HacknetPathfinder 路径
             if (saveDir == null)
             {
                 string personal = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-                string extName = parts.Length >= 3 ? parts[2]
-                    : (ExtensionLoader.ActiveExtensionInfo?.GetFoldersafeName() ?? "I");
-                string pfDir = personal + "/My Games/HacknetPathfinder/Accounts/" + extName + "/HHBS/";
-                if (Directory.Exists(pfDir))
-                    saveDir = pfDir;
-                else
+                string extName = ExtensionLoader.ActiveExtensionInfo?.GetFoldersafeName() ?? "I";
+                foreach (var candidate in new[] {
+                    personal + "/My Games/HacknetPathfinder/Accounts/" + extName + "/HHBS/",
+                    personal + "/My Games/HacknetPathfinder/Accounts/" + extName + "/",
+                    personal + "/My Games/Hacknet/Accounts/" + extName + "/",
+                })
                 {
-                    // 再试不带 HHBS 的路径
-                    pfDir = personal + "/My Games/HacknetPathfinder/Accounts/" + extName + "/";
-                    if (Directory.Exists(pfDir))
-                        saveDir = pfDir;
+                    if (Directory.Exists(candidate))
+                    { saveDir = candidate; break; }
                 }
             }
 
@@ -596,6 +677,183 @@ internal static class ServerManager
     }
 
     /// <summary>
+    /// 检查指定用户的存档是否已存在（用于创建服务器前的冲突检测）
+    ///   CHECK_SAVE_CONFLICT:{username}
+    /// 回复：SAVE_CONFLICT:no 或 SAVE_CONFLICT:yes:{size}:{path}
+    /// </summary>
+    private static void HandleCheckSaveConflict(string[] parts)
+    {
+        string username = parts.Length >= 2 ? parts[1] : "";
+        if (string.IsNullOrEmpty(username))
+        {
+            SendEvent("SAVE_CONFLICT:no");
+            return;
+        }
+
+        try
+        {
+            string hhbsPath = HostileHackerBreakinSequence.GetBaseDirectory();
+            string saveFile = Path.Combine(hhbsPath, $"save_{username}.xml");
+
+            if (File.Exists(saveFile))
+            {
+                var fi = new FileInfo(saveFile);
+                SendEvent($"SAVE_CONFLICT:yes:{fi.Length}:{fi.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+                Console.WriteLine($"[CheckSaveConflict] Conflict found: {saveFile}");
+            }
+            else
+            {
+                SendEvent("SAVE_CONFLICT:no");
+                Console.WriteLine($"[CheckSaveConflict] No conflict for {username}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CheckSaveConflict] Error: {ex.Message}");
+            SendEvent("SAVE_CONFLICT:no");
+        }
+    }
+
+    /// <summary>
+    /// 删除冲突的存档文件并从 HHBS 账户列表中移除
+    ///   DELETE_SAVE_CONFLICT:{username}
+    /// </summary>
+    private static void HandleDeleteSaveConflict(string[] parts)
+    {
+        string username = parts.Length >= 2 ? parts[1] : "";
+        if (string.IsNullOrEmpty(username))
+        {
+            SendEvent("DELETE_SAVE_CONFLICT:fail:no username");
+            return;
+        }
+
+        try
+        {
+            string hhbsPath = HostileHackerBreakinSequence.GetBaseDirectory();
+            string saveFile = Path.Combine(hhbsPath, $"save_{username}.xml");
+
+            // 1. 删除存档文件
+            if (File.Exists(saveFile))
+            {
+                File.Delete(saveFile);
+                Console.WriteLine($"[DeleteSaveConflict] Deleted: {saveFile}");
+            }
+
+            // 2. 从所有 StorageMethod 的 manifest 移除对应账户（冗余操作）
+            try
+            {
+                var methods = SaveFileManager.StorageMethods;
+                if (methods != null)
+                {
+                    foreach (var storage in methods)
+                    {
+                        if (storage == null) continue;
+                        var manifest = storage.GetSaveManifest();
+                        var removed = manifest.Accounts.RemoveAll(a =>
+                            a.Username.Equals(username, StringComparison.OrdinalIgnoreCase) ||
+                            a.FileUsername?.Equals($"save_{username}.xml", StringComparison.OrdinalIgnoreCase) == true);
+                        if (removed > 0)
+                        {
+                            manifest.Save(storage);
+                            Console.WriteLine($"[DeleteSaveConflict] Removed {removed} account(s) from {storage.GetType().Name} manifest");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DeleteSaveConflict] Manifest removal error: {ex.Message}");
+            }
+
+            SendEvent("DELETE_SAVE_CONFLICT:ok");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DeleteSaveConflict] Error: {ex.Message}");
+            SendEvent($"DELETE_SAVE_CONFLICT:fail:{ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 检查指定用户的存档是否已存在（供 creataccount 指令使用）
+    ///   CHECK_ACCOUNT_SAVE:{username}
+    /// 回复：ACCOUNT_SAVE_EXISTS:yes 或 ACCOUNT_SAVE_EXISTS:no
+    /// </summary>
+    private static void HandleCheckAccountSave(string[] parts)
+    {
+        string username = parts.Length >= 2 ? parts[1] : "";
+        if (string.IsNullOrEmpty(username))
+        {
+            SendEvent("ACCOUNT_SAVE_EXISTS:no");
+            return;
+        }
+
+        try
+        {
+            string filePath = SaveFileManager.GetFilePathForLogin(username, "");
+            bool exists = !string.IsNullOrEmpty(filePath) && SaveFileHelper.SaveExists(filePath);
+            SendEvent(exists ? "ACCOUNT_SAVE_EXISTS:yes" : "ACCOUNT_SAVE_EXISTS:no");
+            Console.WriteLine($"[CheckAccountSave] username={username} exists={exists}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CheckAccountSave] Error: {ex.Message}");
+            SendEvent("ACCOUNT_SAVE_EXISTS:no");
+        }
+    }
+
+    /// <summary>
+    /// 为指定用户创建存档（供 creataccount 指令使用）
+    ///   CREATE_ACCOUNT_SAVE:{username}:{password}
+    /// 回复：ACCOUNT_SAVE_CREATED:ok 或 ACCOUNT_SAVE_CREATED:fail:{reason}
+    /// </summary>
+    private static void HandleCreateAccountSave(string[] parts)
+    {
+        string username = parts.Length >= 2 ? parts[1] : "";
+        string password = parts.Length >= 3 ? parts[2] : "";
+
+        if (string.IsNullOrEmpty(username))
+        {
+            SendEvent("ACCOUNT_SAVE_CREATED:fail:no username");
+            return;
+        }
+
+        try
+        {
+            // 先检查账户是否已注册
+            bool accountExists = SaveFileManager.Accounts.Any(a =>
+                a.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+            if (!accountExists)
+            {
+                // 注册账户
+                SaveFileManager.AddUser(username, password);
+                SaveFileHelper.SaveManifestToAll();
+                Console.WriteLine($"[CreateAccountSave] Account registered: {username}");
+            }
+
+            // 再次检查存档文件是否已存在
+            string filePath = SaveFileManager.GetFilePathForLogin(username, password);
+            bool saveAlreadyExists = !string.IsNullOrEmpty(filePath) && SaveFileHelper.SaveExists(filePath);
+
+            if (saveAlreadyExists)
+            {
+                SendEvent($"ACCOUNT_SAVE_CREATED:fail:save already exists for {username}");
+                Console.WriteLine($"[CreateAccountSave] Save already exists for {username}");
+                return;
+            }
+
+            SendEvent("ACCOUNT_SAVE_CREATED:ok");
+            Console.WriteLine($"[CreateAccountSave] Account ready: {username}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CreateAccountSave] Error: {ex.Message}");
+            SendEvent($"ACCOUNT_SAVE_CREATED:fail:{ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// 响应 Terminal 的存档请求。
     /// 存档写入桌面临时目录（Mod 与 Terminal 同机共享文件系统），
     /// Pipe 只发信号 SAVE_FILE_READY:{path}:{size}，不传数据本身。
@@ -615,8 +873,8 @@ internal static class ServerManager
             // 先触发游戏保存，确保存档最新
             os.saveGame();
 
-            // 读取存档
-            using var stream = SaveFileManager.GetSaveReadStream(os.SaveGameUserName);
+            // 遍历所有 StorageMethod 找存档（修复 [0] 指向不确定的问题）
+            using var stream = SaveFileHelper.GetReadStream(os.SaveGameUserName);
             if (stream == null)
             {
                 Console.WriteLine("[HandleGetSaveFile] GetSaveReadStream returned null");
@@ -662,7 +920,7 @@ internal static class ServerManager
         {
             string action = parts[2];
             string compID = parts[3];
-            string filePath = parts[4];
+            string filePath = parts.Length > 4 ? System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[4])) : "";
             string sourceIP = parts.Length > 5 ? parts[5] : os.thisComputer.ip;
 
             var comp = os.netMap?.nodes?.Find(c =>
@@ -674,7 +932,6 @@ internal static class ServerManager
             }
 
             // 直接调用 EventReceiver 的静态方法来应用文件操作
-            // 注意：客户端没引用 EventReceiver，我们反射调用或直接复制逻辑
             ApplyFileAction(comp, action, filePath, sourceIP, parts);
         }
         else
@@ -686,6 +943,11 @@ internal static class ServerManager
     private static void ApplyFileAction(Computer comp, string action, string filePath, string sourceIP, string[] parts)
     {
         // 临时抑制事件转发，防止 FileSystemDetector 再次触发相同事件形成死循环
+        // 如果上一次异常导致 Suppress 没被复位，先检测并复位
+        if (EventForwarder.Suppress)
+        {
+            Console.WriteLine("[ServerPlugin] WARNING: Suppress was already true! Auto-reset to prevent lockout.");
+        }
         EventForwarder.Suppress = true;
         try
         {

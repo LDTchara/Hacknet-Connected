@@ -38,7 +38,7 @@ internal static class NetworkManager
             AutoRecycle = true,
             UpdateTime = 15,
             PingInterval = 2000,
-            DisconnectTimeout = 5000
+            DisconnectTimeout = 30000
         };
         _netManager.Start(port);
         Console.WriteLine($"[网络] LiteNetLib 监听端口 {port}");
@@ -90,12 +90,14 @@ internal static class NetworkManager
     // ── 连接管理 ──
 
     /// <summary>注册客户端身份（由 HELLO 握手触发）</summary>
-    public static ClientInfo RegisterClient(NetPeer peer, string playerName)
+    /// <param name="overrideId">指定 PlayerId（来自 PlayerDataManager），不指定则用内部自增计数器</param>
+    public static ClientInfo RegisterClient(NetPeer peer, string playerName, int? overrideId = null)
     {
+        int pid = overrideId ?? _nextPlayerId++;
         var info = new ClientInfo
         {
             PeerId = peer.Id,
-            PlayerId = _nextPlayerId++,
+            PlayerId = pid,
             PlayerName = playerName,
             Peer = peer
         };
@@ -123,10 +125,16 @@ internal static class NetworkManager
         Broadcast($"PLAYER_LIST:{names}");
     }
 
-    private static void Log(string tag, string msg)
+    /// <summary>net_log.txt 写锁（防后台 Pipe 线程和 LiteNetLib 线程并发写）</summary>
+    private static readonly object _netLogLock = new();
+
+    internal static void Log(string tag, string msg)
     {
-        File.AppendAllText("net_log.txt",
-            $"{DateTime.Now:HH:mm:ss.fff} [{tag}] {msg}{Environment.NewLine}");
+        lock (_netLogLock)
+        {
+            File.AppendAllText("net_log.txt",
+                $"{DateTime.Now:HH:mm:ss.fff} [{tag}] {msg}{Environment.NewLine}");
+        }
     }
 }
 
@@ -163,33 +171,56 @@ internal class ServerNetListener : INetEventListener
     public void OnNetworkReceive(NetPeer peer, NetPacketReader reader, byte ch, DeliveryMethod dm)
     {
         var msg = reader.GetString();
-        File.AppendAllText("net_log.txt",
-            $"{DateTime.Now:HH:mm:ss.fff} [NET_RCV] Peer={peer.Id}: {msg}{Environment.NewLine}");
+        NetworkManager.Log("NET_RCV", $"Peer={peer.Id}: {msg}");
 
         // ── 握手：HELLO:playerName ──
         if (msg.StartsWith("HELLO:"))
         {
             var playerName = msg.Substring("HELLO:".Length);
             var info = NetworkManager.RegisterClient(peer, playerName);
+
+            // 使用 PlayerDataManager 创建/获取玩家记录
+            string serverName = CommandHandler.CurrentServerName;
+            PlayerData playerData;
+            if (PlayerDataManager.IsKnownPlayer(playerName, serverName))
+            {
+                playerData = PlayerDataManager.FindByName(playerName, serverName)!;
+                playerData.LastLogin = DateTime.Now;
+                PlayerDataManager.UpdatePlayer(playerData, serverName);
+                Console.WriteLine($"[网络] 已知玩家 {playerName} (Id={playerData.Id})");
+            }
+            else
+            {
+                playerData = PlayerDataManager.CreatePlayer(playerName, serverName);
+                Console.WriteLine($"[网络] 新玩家 {playerName} → 分配 Id={playerData.Id}");
+            }
+
+            // 检查本地是否有该玩家的存档（上传时存到 Storage/Saves/）
+            string? playerSavePath = GetPlayerSavePath(playerName);
+            if (playerSavePath != null)
+            {
+                NetworkManager.SendTo(peer, "HAS_SAVE");
+                SendSaveFileToPlayer(peer, playerSavePath, playerName);
+            }
+            else
+            {
+                NetworkManager.SendTo(peer, "NO_SAVE");
+            }
+
+            // 用 PlayerData.Id 重新注册（覆盖 RegisterClient 的内部自增 ID）
+            if (info.PlayerId != playerData.Id)
+            {
+                NetworkManager.RemoveClient(peer.Id);
+                info = NetworkManager.RegisterClient(peer, playerName, playerData.Id);
+            }
+
+            // WELCOME + PLAYER_DATA（两个 ID 一致）
             NetworkManager.SendTo(peer, $"WELCOME:{info.PlayerId}");
+            NetworkManager.SendTo(peer, $"PLAYER_DATA:{playerData.Id}:{playerData.Name}");
             Console.WriteLine($"[网络] 已回复 WELCOME:PlayerId={info.PlayerId}");
-            
+
             // 立即发送世界种子
             SendWorldSeedToClient(peer, info);
-
-            // 请求服务端存档文件（终端读盘 → 分块 LiteNetLib 广播）
-            _ = Task.Run(async () =>
-            {
-                try { await Program.SendToMod("GET_SAVE_FILE", false); }
-                catch { }
-            });
-
-            // 请求服务端存档列表（供客户端对比）
-            _ = Task.Run(async () =>
-            {
-                try { await Program.SendToMod($"GET_SAVE_LIST:{playerName}", false); }
-                catch { }
-            });
 
             NetworkManager.BroadcastPlayerList();
             return;
@@ -203,7 +234,7 @@ internal class ServerNetListener : INetEventListener
             {
                 client.SeedConfirmed = true;
                 Console.WriteLine($"[网络] 客户端 {client.PlayerName} 已确认种子同步完成");
-                
+
                 // 可以在此处触发后续操作，例如允许创建账户等
                 // TODO: 通知游戏逻辑层客户端已准备就绪
             }
@@ -229,60 +260,78 @@ internal class ServerNetListener : INetEventListener
         // ── 客户端上传存档（分块接收） ──
         // SAVE_DATA_CHUNK:{seq}:{total}:{username}:{base64part}
         // SAVE_DATA_DONE:{total}
+        // ── 客户端上传存档（分块接收，uploadSeq 区分新旧） ──
+        // SAVE_DATA_CHUNK:{seq}:{total}:{uploadSeq}:{username}:{base64part}
         if (msg.StartsWith("SAVE_DATA_CHUNK:"))
         {
-            var parts = msg.Split(':', 5);
-            if (parts.Length == 5 &&
+            var parts = msg.Split(':', 6);
+            if (parts.Length == 6 &&
                 int.TryParse(parts[1], out int seq) &&
-                int.TryParse(parts[2], out int total))
+                int.TryParse(parts[2], out int total) &&
+                int.TryParse(parts[3], out int uploadSeq))
             {
-                string username = parts[3];
-                string chunkData = parts[4];
-                if (!NetworkManager.Uploads.TryGetValue(username, out var up))
+                string username = parts[4];
+                string chunkData = parts[5];
+                string key = $"{username}_{uploadSeq}";  // uploadSeq 递增，新旧自动隔离
+
+                if (!NetworkManager.Uploads.TryGetValue(key, out var up))
                 {
                     up = new ChunkedUpload { Total = total, Username = username, Chunks = new string[total] };
-                    NetworkManager.Uploads[username] = up;
+                    NetworkManager.Uploads[key] = up;
                 }
                 if (seq >= 0 && seq < total)
                     up.Chunks![seq] = chunkData;
 
-                Console.Write($"\r[网络] 存档接收: {up.Chunks!.Count(c => c != null)}/{total}");
+                Console.Write($"\r[网络] 存档接收 [{key}]: {up.Chunks!.Count(c => c != null)}/{total}");
             }
             return;
         }
         if (msg.StartsWith("SAVE_DATA_DONE:"))
         {
-            var totalStr = msg.Substring("SAVE_DATA_DONE:".Length);
-            if (int.TryParse(totalStr, out int total) && NetworkManager.Uploads.Count > 0)
+            // SAVE_DATA_DONE:{total}:{uploadSeq}
+            var parts = msg.Split(':');
+            if (parts.Length >= 3 && int.TryParse(parts[1], out int total) && int.TryParse(parts[2], out int doneSeq))
             {
-                // 找 username（从最后一个上传）
-                var kv = NetworkManager.Uploads.Last();
-                var up = kv.Value;
-                if (up.Chunks != null && up.Chunks.All(c => c != null))
+                // 找到匹配 uploadSeq 的上传
+                string key = NetworkManager.Uploads.Keys
+                    .FirstOrDefault(k => k.EndsWith($"_{doneSeq}"));
+                if (key != null && NetworkManager.Uploads.TryGetValue(key, out var up))
                 {
-                    var sb = new System.Text.StringBuilder();
-                    for (int i = 0; i < up.Total; i++) sb.Append(up.Chunks[i]);
-                    try
+                    if (up.Chunks != null && up.Chunks.All(c => c != null))
                     {
-                        string b64 = sb.ToString();
-                        byte[] data = Convert.FromBase64String(b64);
-                        string saveDir = Path.Combine(
-                            Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "HacknetSaves");
-                        Directory.CreateDirectory(saveDir);
-                        string savePath = Path.Combine(saveDir, $"save_{up.Username}_uploaded.xml");
-                        File.WriteAllBytes(savePath, data);
-                        Console.WriteLine($"\n[网络] 收到存档: {up.Username} ({data.Length} 字节, {total} 块) -> {savePath}");
+                        var sb = new System.Text.StringBuilder();
+                        for (int i = 0; i < up.Total; i++) sb.Append(up.Chunks[i]);
+                        try
+                        {
+                            string b64 = sb.ToString();
+                            byte[] data = Convert.FromBase64String(b64);
+                            // LDTchara注：这个地方后期需要改成存到服务器指定目录，而不是桌面
+                            string saveDir = Path.Combine(
+                                Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "HacknetSaves");
+                            Directory.CreateDirectory(saveDir);
+                            string savePath = Path.Combine(saveDir, $"save_{up.Username}_uploaded.xml");
+                            File.WriteAllBytes(savePath, data);
+
+                            // 同时存入玩家专属存档目录（供重连时直接读取）
+                            string perPlayerDir = Path.Combine("Storage", "Saves");
+                            Directory.CreateDirectory(perPlayerDir);
+                            string perPlayerPath = Path.Combine(perPlayerDir, $"{up.Username}.xml");
+                            File.WriteAllBytes(perPlayerPath, data);
+
+                            Console.WriteLine($"\n[网络] 收到存档: {up.Username} ({data.Length} 字节, {total} 块) -> {savePath}");
+                            Console.WriteLine($"[网络] 已存入玩家存档: {perPlayerPath}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"\n[网络] 存档保存失败: {ex.Message}");
+                        }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Console.WriteLine($"\n[网络] 存档保存失败: {ex.Message}");
+                        Console.WriteLine($"\n[网络] 存档接收不完整 [{key}]: 只有 {(up.Chunks?.Count(c => c != null) ?? 0)}/{total} 块");
                     }
+                    NetworkManager.Uploads.Remove(key);
                 }
-                else
-                {
-                    Console.WriteLine($"\n[网络] 存档接收不完整: 只有 {(up.Chunks?.Count(c => c != null) ?? 0)}/{total} 块");
-                }
-                NetworkManager.Uploads.Remove(kv.Key);
             }
             return;
         }
@@ -331,21 +380,58 @@ internal class ServerNetListener : INetEventListener
         {
             BroadcastExceptSender(peer, msg);
 
-            // 转发到 Mod（仅处理有用的事件类型）
+            Console.WriteLine("[NET_RCV] Client event: " + msg.Substring(0, Math.Min(80, msg.Length)));
+                    // 转发到 Mod（仅处理有用的事件类型）
             // NODE_IP / FLAG / MISSION 等高频低价值事件不转发给 Mod
+            // 使用 FireForget：不阻塞 PipeListenLoop，信号量串行化 + 超时丢弃防背压
             if (!msg.StartsWith("EVENT:NODE_IP:") && !msg.StartsWith("EVENT:FLAG:") && !msg.StartsWith("EVENT:MISSION:"))
             {
-                Task.Run(async () =>
-                {
-                    try { await Program.SendToMod(msg); }
-                    catch { }
-                });
+                _ = Program.SendToModFireForget(msg);
             }
         }
     }
 
-    /// <summary>
-    /// 向模组请求世界种子。
+        /// <summary>
+        /// 获取指定玩家的本地存档路径（Storage/Saves/{name}.xml）。
+        /// 文件不存在返回 null。
+        /// </summary>
+        private static string? GetPlayerSavePath(string playerName)
+        {
+            string path = System.IO.Path.Combine("Storage", "Saves", $"{playerName}.xml");
+            return System.IO.File.Exists(path) ? path : null;
+        }
+
+        /// <summary>
+        /// 将本地存档文件分块发送给指定客户端。
+        /// 格式与 PipeListenLoop 中的 S_FILE_INFO/S_FILE/S_FILE_END 一致。
+        /// </summary>
+        private static void SendSaveFileToPlayer(NetPeer peer, string filePath, string playerName)
+        {
+            try
+            {
+                byte[] data = System.IO.File.ReadAllBytes(filePath);
+                string b64 = Convert.ToBase64String(data);
+                int chunkSize = 60000;
+                int total = (b64.Length + chunkSize - 1) / chunkSize;
+
+                NetworkManager.SendTo(peer, $"S_FILE_INFO:{total}");
+                for (int i = 0; i < total; i++)
+                {
+                    int start = i * chunkSize;
+                    int len = Math.Min(chunkSize, b64.Length - start);
+                    NetworkManager.SendTo(peer, $"S_FILE:{i}:{total}:{b64.Substring(start, len)}");
+                }
+                NetworkManager.SendTo(peer, $"S_FILE_END:{total}");
+                Console.WriteLine($"[网络] 已发送玩家存档 {playerName} ({data.Length} 字节, {total} 块)");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[网络] 发送玩家存档失败 {playerName}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 向模组请求世界种子。
     /// 种子数据通过 PipeListenLoop → Broadcast 到达客户端，这里只负责触发请求。
     /// </summary>
     private async void SendWorldSeedToClient(NetPeer peer, ClientInfo client)
@@ -365,7 +451,7 @@ internal class ServerNetListener : INetEventListener
     {
         // TODO: 后续加消息路由（按 isPublic 过滤、按 playerId 定向）
         // 目前先广播给所有人
-        NetworkManager.Broadcast(msg);
+        Broadcast(msg);
     }
 
     public void OnNetworkError(System.Net.IPEndPoint ep, System.Net.Sockets.SocketError err) { }

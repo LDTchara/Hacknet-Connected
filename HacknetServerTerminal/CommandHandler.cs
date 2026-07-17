@@ -11,6 +11,9 @@ internal static class CommandHandler
 {
     private static ServerProfile _currentProfile = new();
 
+    /// <summary>当前已登录的服务器名称（供 Program 等外部使用）</summary>
+    public static string CurrentServerName => _currentProfile?.ServerName ?? "";
+
     public static async Task RunLoop()
     {
         while (true)
@@ -75,6 +78,15 @@ internal static class CommandHandler
                 case "start":
                     await StartServer();
                     return;
+                case "creataccount":
+                    await CreateAccountSave();
+                    return;
+                case "retryevents":
+                    RetryEvents();
+                    return;
+                case "players":
+                    HandlePlayersCommand(parts);
+                    return;
                 case "broadcast":
                     if (parts.Length < 2) { Console.WriteLine("用法: broadcast <消息>"); return; }
                     NetworkManager.Broadcast(string.Join(" ", parts, 1, parts.Length - 1));
@@ -119,6 +131,9 @@ internal static class CommandHandler
                 case "help":
                     Console.WriteLine("  options       - 查看当前服务端配置");
                     Console.WriteLine("  start         - 启动服务器（创建账户）");
+                    Console.WriteLine("  creataccount  - 创建账户存档（存档不存在时）");
+                    Console.WriteLine("  retryevents   - 重试因管道背压未送达模组的事件");
+                    Console.WriteLine("  players       - 管理已知玩家列表 (list/add/remove/edit)");
                     Console.WriteLine("  broadcast <m> - 广播消息给所有客户端");
                     Console.WriteLine("  refresh fs    - 全量文件系统同步");
                     Console.WriteLine("  status        - 显示服务端状态");
@@ -127,9 +142,9 @@ internal static class CommandHandler
                     Console.WriteLine("  exit          - 退出");
                     return;
                 case "exit":
-                    Console.WriteLine("请求客户端上传存档...");
+                    Console.WriteLine("请求客户端上传存档（等待 6 秒完成传输）...");
                     NetworkManager.Broadcast("SAVE_REQUIRED");
-                    System.Threading.Thread.Sleep(2000);
+                    System.Threading.Thread.Sleep(6000);
                     Console.WriteLine("关闭服务端...");
                     Environment.Exit(0);
                     return;
@@ -276,6 +291,10 @@ internal static class CommandHandler
             Console.WriteLine($"已删除服务端 [{name}]。");
         else
             Console.WriteLine($"删除失败 [{name}]。");
+
+        // 同步删除玩家数据（和服务器 profile 解耦）
+        if (!string.IsNullOrWhiteSpace(accountName) && PlayerDataManager.RemovePlayer(accountName, name))
+            Console.WriteLine($"已删除玩家 [{accountName}] 的数据。");
     }
 
     private static async Task StartServer()
@@ -313,6 +332,13 @@ internal static class CommandHandler
             Console.WriteLine("种子: 自动生成（使用 seed <值> 设置固定种子）");
         }
 
+        // 将主机管理员注册到玩家列表（作为服务端自己的账号）
+        if (!string.IsNullOrWhiteSpace(p.HostAccountName))
+        {
+            var hostPlayer = PlayerDataManager.CreatePlayer(p.HostAccountName, p.ServerName);
+            Console.WriteLine($"主机玩家 [{p.HostAccountName}] (Id={hostPlayer.Id}) 已加入玩家列表。");
+        }
+
         var msg = $"LAUNCH_SERVER:{p.ServerName}:{p.HostAccountName}:{p.HostAccountPassword}:{p.Port}";
         var reply = await Program.SendToMod(msg);
         Console.WriteLine($"模组: {reply}");
@@ -320,6 +346,147 @@ internal static class CommandHandler
         // start 后保持登录态，用户可继续使用 refresh/broadcast 等命令
         // 不需要登出 — 游戏端账户由模组管理，终端登录态独立
         Console.WriteLine($"服务器 [{p.ServerName}] 已启动。");
+    }
+
+    /// <summary>
+    /// 创建账户存档（供 creataccount 指令使用）。
+    /// 先检查存档是否已存在，不存在则创建。
+    /// </summary>
+    private static async Task CreateAccountSave()
+    {
+        var p = _currentProfile;
+
+        if (string.IsNullOrWhiteSpace(p.HostAccountName))
+        {
+            Console.WriteLine("HostAccountName 未设置，请先用 options 查看配置。");
+            return;
+        }
+
+        if (!Program.IsModConnected)
+        {
+            Console.WriteLine("Mod 未连接，无法创建账户。请先确认游戏已启动并按下 Y。");
+            return;
+        }
+
+        // 1. 检查存档是否已存在
+        Console.WriteLine($"检查 [{p.HostAccountName}] 的存档状态...");
+        string? checkReply = Program.SendToModAndWait($"CHECK_ACCOUNT_SAVE:{p.HostAccountName}");
+
+        if (checkReply == "ACCOUNT_SAVE_EXISTS:yes")
+        {
+            Console.WriteLine("存档已存在，指令不可用。");
+            Console.WriteLine("如需重置请使用 delete 指令删除服务端后重新 create。");
+            return;
+        }
+        else if (checkReply == null)
+        {
+            Console.WriteLine("Mod 未回复，请确认游戏正在运行。");
+            return;
+        }
+
+        // 2. 存档不存在，创建
+        Console.WriteLine("存档不存在，正在创建...");
+        string password = p.HostAccountPassword;
+        string? createReply = Program.SendToModAndWait($"CREATE_ACCOUNT_SAVE:{p.HostAccountName}:{password}");
+
+        if (createReply == "ACCOUNT_SAVE_CREATED:ok")
+        {
+            Console.WriteLine($"账户 [{p.HostAccountName}] 存档已创建。");
+            Console.WriteLine("现在可以使用 start 指令启动服务器。");
+        }
+        else if (createReply != null && createReply.StartsWith("ACCOUNT_SAVE_CREATED:fail:"))
+        {
+            string reason = createReply.Substring("ACCOUNT_SAVE_CREATED:fail:".Length);
+            Console.WriteLine($"创建失败: {reason}");
+        }
+        else
+        {
+            Console.WriteLine($"创建失败，Mod 回复: {createReply ?? "(无回复)"}");
+        }
+    }
+
+    /// <summary>
+    /// 重试因管道背压未送达模组的事件（供 retryevents 指令使用）。
+    /// </summary>
+    private static void RetryEvents()
+    {
+        if (!Program.IsModConnected)
+        {
+            Console.WriteLine("Mod 未连接，无法重试。");
+            return;
+        }
+
+        int count = Program.DeferredEventCount;
+        if (count == 0)
+        {
+            Console.WriteLine("没有待重试的事件。");
+            return;
+        }
+
+        Console.WriteLine($"正在重试 {count} 条推迟事件...");
+        int retried = Program.RetryDeferredEvents();
+        Console.WriteLine($"重试完成: {retried} 条已发送，{Program.DeferredEventCount} 条剩余。");
+    }
+
+    /// <summary>
+    /// 管理已知玩家列表（供 players 指令使用）
+    ///   players list          — 列出所有
+    ///   players add <name>    — 添加
+    ///   players remove <name> — 删除
+    ///   players edit <a> <b>  — 改名
+    /// </summary>
+    private static void HandlePlayersCommand(string[] parts)
+    {
+        if (parts.Length < 2) { Console.WriteLine("用法: players list/add/remove/edit"); return; }
+        string serverName = _currentProfile.ServerName;
+
+        switch (parts[1].ToLower())
+        {
+            case "list":
+                var all = PlayerDataManager.GetAllPlayers(serverName);
+                if (all.Count == 0)
+                {
+                    Console.WriteLine("（无已知玩家）");
+                    return;
+                }
+                Console.WriteLine($"共 {all.Count} 个已知玩家:");
+                foreach (var p in all)
+                {
+                    string seedInfo = p.WorldSeed > 0 ? $" Seed={p.WorldSeed}" : "";
+                    string loginInfo = p.LastLogin > DateTime.MinValue
+                        ? $" 上次={p.LastLogin:yyyy-MM-dd HH:mm}" : "";
+                    Console.WriteLine($"  [P{p.Id}] {p.Name}{seedInfo}{loginInfo}");
+                }
+                break;
+
+            case "add":
+                if (parts.Length < 3) { Console.WriteLine("用法: players add <玩家名称>"); return; }
+                if (PlayerDataManager.CreatePlayer(parts[2], serverName) != null)
+                    Console.WriteLine($"已添加玩家 [{parts[2]}]");
+                else
+                    Console.WriteLine($"添加失败（可能已存在）");
+                break;
+
+            case "remove":
+                if (parts.Length < 3) { Console.WriteLine("用法: players remove <玩家名称>"); return; }
+                if (PlayerDataManager.RemovePlayer(parts[2], serverName))
+                    Console.WriteLine($"已删除玩家 [{parts[2]}]");
+                else
+                    Console.WriteLine($"找不到 [{parts[2]}]");
+                break;
+
+            case "edit":
+                if (parts.Length < 4) { Console.WriteLine("用法: players edit <旧名称> <新名称>"); return; }
+                if (PlayerDataManager.RenamePlayer(parts[2], parts[3], serverName))
+                    Console.WriteLine($"已重命名: {parts[2]} → {parts[3]}");
+                else
+                    Console.WriteLine($"重命名失败（找不到 [{parts[2]}] 或 [{parts[3]}] 已存在）");
+                break;
+
+            default:
+                Console.WriteLine("用法: players list/add/remove/edit");
+                break;
+        }
     }
 
     private static bool IsPortAvailable(int port)
@@ -458,6 +625,38 @@ internal static class CommandHandler
                     Console.WriteLine("配置不完整，请检查选项 (options)");
                     break;
                 }
+
+                // 冲突检测：检查 HHBS 是否已存在同名存档
+                if (Program.IsModConnected && !string.IsNullOrEmpty(_currentProfile.HostAccountName))
+                {
+                    string? reply = Program.SendToModAndWait($"CHECK_SAVE_CONFLICT:{_currentProfile.HostAccountName}");
+                    if (reply != null && reply.StartsWith("SAVE_CONFLICT:yes:"))
+                    {
+                        var pcs = reply.Split(':');
+                        string size = pcs.Length >= 3 ? pcs[2] : "?";
+                        string date = pcs.Length >= 4 ? pcs[3] : "?";
+                        Console.Write($"HHBS 已存在存档 save_{_currentProfile.HostAccountName}.xml ({size} bytes, {date})。删除并继续？(y/n): ");
+                        var confirm = Console.ReadLine()?.Trim().ToUpper();
+                        if (confirm == "Y")
+                        {
+                            var delReply = Program.SendToModAndWait($"DELETE_SAVE_CONFLICT:{_currentProfile.HostAccountName}");
+                            if (delReply == "DELETE_SAVE_CONFLICT:ok")
+                                Console.WriteLine("旧存档已删除。");
+                            else
+                                Console.WriteLine($"删除失败: {delReply}");
+                        }
+                        else
+                        {
+                            Console.WriteLine("已取消。请修改 HostAccountName 或手动清理后重试。");
+                            break;
+                        }
+                    }
+                    else if (reply == null)
+                    {
+                        Console.WriteLine("(Mod 未回复，跳过冲突检测)");
+                    }
+                }
+
                 ServerStorage.Save(_currentProfile);
                 Console.WriteLine($"已保存 [{_currentProfile.ServerName}]");
                 Console.WriteLine($"  种子: {_currentProfile.WorldSeed}" +
