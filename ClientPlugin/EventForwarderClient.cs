@@ -1,5 +1,6 @@
 using System;
 using Hacknet;
+using Hacknet.PlatformAPI.Storage;
 using Pathfinder.Event;
 using ServerClientEventsMod.Events;
 
@@ -27,21 +28,18 @@ internal static class EventForwarderClient
             if (e.Path != null && e.Path.Contains("/log/"))
                 return;
 
-            if (e.Path != null && e.Path.Contains("/log/"))
-                return;
-
             string contentPart = "";
             if (e.Content != null && (e.Action == FileSystemAction.FileAdded || e.Action == FileSystemAction.FileContentChanged))
             {
-                string c = e.Content.Length > 8000 ? e.Content.Substring(0, 8000) + "...[TRUNCATED]" : e.Content;
-                contentPart = $":{c}";
+                contentPart = $":{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(e.Content ?? ""))}";
             }
 
             string movePart = "";
             if (e.Action == FileSystemAction.FileMoved && e.FromName != null && e.ToName != null)
                 movePart = $":{e.FromName}:{e.ToName}";
 
-            var msg = $"EVENT:FILE:{e.Action}:{e.Computer?.idName}:{e.Path}:{e.SourceIP}{movePart}{contentPart}";
+            var encodedPath = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(e.Path ?? ""));
+            var msg = $"EVENT:FILE:{e.Action}:{e.Computer?.idName}:{encodedPath}:{e.SourceIP}{movePart}{contentPart}";
 
             SendOrLog(msg);
 
@@ -51,9 +49,12 @@ internal static class EventForwarderClient
         EventManager<PlayerLoginCompEvent>.AddHandler(e =>
             SendOrLog($"EVENT:LOGIN:{e.Computer?.idName}:{e.Username}:{e.IsAdmin}"));
 
-        // ── 连接/断开事件 ──
+        // ── 连接/断开事件（跳过 playerComp——登录时自动连接，不额外转发） ──
         EventManager<PlayerConnectToCompEvent>.AddHandler(e =>
-            SendOrLog($"EVENT:CONNECT:{e.Computer?.idName}:{e.Computer?.ip}"));
+        {
+            if (e.Computer?.idName == "playerComp") return;
+            SendOrLog($"EVENT:CONNECT:{e.Computer?.idName}:{e.Computer?.ip}");
+        });
 
         EventManager<PlayerDisconnectFromCompEvent>.AddHandler(e =>
             SendOrLog($"EVENT:DISCONNECT:{e.IPFrom}"));
@@ -66,13 +67,9 @@ internal static class EventForwarderClient
         EventManager<PlayerFirewallEvent>.AddHandler(e =>
             SendOrLog($"EVENT:FIREWALL:{e.Computer?.idName}:{e.State}"));
 
-        // ── 节点可见性变化 ──
-        EventManager<PlayerNodeVisibilityEvent>.AddHandler(e =>
-            SendOrLog($"EVENT:NODE_VIS:{e.Computer?.idName}:{e.Visible}"));
-
-        // ── 节点 IP 变化 ──
-        EventManager<PlayerNodeIPChangedEvent>.AddHandler(e =>
-            SendOrLog($"EVENT:NODE_IP:{e.Computer?.idName}:{e.OldIP}:{e.NewIP}"));
+        // ── 节点可见性变化（静默，不同步） ──
+        // 已完全移除订阅，Hacknet 每秒数十次 IP 轮转会触发，
+        // 不需要转发也不需要本地日志。
 
         // ── Action 触发 ──
         EventManager<PlayerActionTriggeredEvent>.AddHandler(e =>
@@ -90,6 +87,20 @@ internal static class EventForwarderClient
         EventManager<PlayerProxyEvent>.AddHandler(e =>
             SendOrLog($"EVENT:PROXY:{e.Computer?.idName}:{e.State}:{e.OverloadTicksRemaining}:{e.StartingOverloadTicks}"));
 
+        // ── 游戏保存事件 → 自动上传存档（30 秒冷却） ──
+        ServerClientEventsMod.Events.PlayerEventAPI.OnSaveGame += os =>
+        {
+            if (!ClientNetworkManager.IsConnected) return;
+            if (DateTime.Now - _lastUploadTime < TimeSpan.FromSeconds(30))
+            {
+                Console.WriteLine("[EventForwarderClient] Save skipped (cooldown)");
+                return;
+            }
+            _lastUploadTime = DateTime.Now;
+            Console.WriteLine("[EventForwarderClient] Local save -> auto upload...");
+            TriggerSaveUpload();
+        };
+
         Console.WriteLine("[EventForwarderClient] Subscribed to local events.");
     }
 
@@ -98,17 +109,59 @@ internal static class EventForwarderClient
     {
         if (ClientNetworkManager.IsConnected)
         {
+            Console.WriteLine("[EventForwarderClient] Sending: " + msg.Substring(0, System.Math.Min(80, msg.Length)));
             ClientNetworkManager.Send(msg);
-            // 全量日志会刷屏，只每 50 条打印一条
             _sendCount++;
             if (_sendCount % 50 == 0)
                 Console.WriteLine($"[EventForwarderClient] Sent {_sendCount} events so far...");
         }
         else
         {
-            // 未连接时只打日志，不发送
             Console.WriteLine("[EventForwarderClient] (offline) " + msg);
         }
     }
     private static int _sendCount = 0;
+    private static DateTime _lastUploadTime = DateTime.MinValue;
+    private static int _uploadSequence = 0;
+    public static int GetNextUploadSeq() => _uploadSequence++;
+
+    /// <summary>读取当前游戏存档并分块上传到服务端</summary>
+    public static void TriggerSaveUpload()
+    {
+        // 立即设置冷却，防止 os.saveGame() 触发 OnSaveGame 回调再进来一次
+        _lastUploadTime = DateTime.Now;
+
+        try
+        {
+            var os = OS.currentInstance;
+            if (os == null || string.IsNullOrEmpty(os.SaveGameUserName)) return;
+
+            os.saveGame();
+            using var stream = SaveFileHelper.GetReadStream(os.SaveGameUserName);
+            if (stream == null) return;
+
+            var mem = new System.IO.MemoryStream();
+            stream.CopyTo(mem);
+            var data = mem.ToArray();
+            var b64 = Convert.ToBase64String(data);
+            string username = os.SaveUserAccountName ?? os.SaveGameUserName.Replace("save_", "").Replace(".xml", "");
+
+            int chunkSize = 60000;
+            int total = (b64.Length + chunkSize - 1) / chunkSize;
+            int uploadSeq = GetNextUploadSeq();  // 每次上传递增，终端用来区分新旧
+            for (int i = 0; i < total; i++)
+            {
+                int start = i * chunkSize;
+                int len = Math.Min(chunkSize, b64.Length - start);
+                ClientNetworkManager.Send($"SAVE_DATA_CHUNK:{i}:{total}:{uploadSeq}:{username}:{b64.Substring(start, len)}");
+            }
+            ClientNetworkManager.Send($"SAVE_DATA_DONE:{total}:{uploadSeq}");
+            // 注意：uploadSeq 是 int，溢出后回绕。正常情况下不会溢出（2^31 次上传）。
+            Console.WriteLine($"[EventForwarderClient] Save uploaded: {data.Length} bytes ({total} chunks)");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EventForwarderClient] Upload error: {ex.Message}");
+        }
+    }
 }

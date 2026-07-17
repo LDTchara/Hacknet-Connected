@@ -40,6 +40,9 @@ public static class PlayerEventAPI
     // ---- 文件系统 ----
     public static event Action<Computer, OS, FileSystemAction, string, string> OnFileSystemChanged;
 
+    // ---- 游戏保存 ----
+    public static event Action<OS> OnSaveGame;
+
     // ---- 条件动作触发 ----
     public static event Action<SerializableAction, OS, string, string> OnActionTriggered;
 
@@ -60,5 +63,6 @@ public static class PlayerEventAPI
     internal static void RaiseNodeVisibilityChanged(Computer c, OS os, bool v) => OnNodeVisibilityChanged?.Invoke(c, os, v);
     internal static void RaiseNodeIPChanged(Computer c, OS os, string oldIP, string newIP) => OnNodeIPChanged?.Invoke(c, os, oldIP, newIP);
     internal static void RaiseFileSystemChanged(Computer c, OS os, FileSystemAction a, string p, string ip) => OnFileSystemChanged?.Invoke(c, os, a, p, ip);
+    internal static void RaiseSaveGame(OS os) => OnSaveGame?.Invoke(os);
     internal static void RaiseActionTriggered(SerializableAction a, OS os, string t, string x) => OnActionTriggered?.Invoke(a, os, t, x);
 }

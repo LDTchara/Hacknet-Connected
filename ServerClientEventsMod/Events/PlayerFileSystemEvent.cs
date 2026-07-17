@@ -194,6 +194,7 @@ internal static class FileSystemDetector
                             ?? os.thisComputer.ip;
                 // 文件添加时读取内容
                 string content = isFolder ? null : GetFileContent(comp, kv.Key);
+                Console.WriteLine("[FSEVENT] " + (isFolder ? "FolderAdded" : "FileAdded") + " " + compID + " " + kv.Key);
                 EventManager<PlayerFileSystemEvent>.InvokeAll(
                     new PlayerFileSystemEvent(comp, os,
                         isFolder ? FileSystemAction.FolderAdded : FileSystemAction.FileAdded, kv.Key, ip, null, null, content));
@@ -204,6 +205,7 @@ internal static class FileSystemDetector
                 string ip = FileLogInterceptor.TryGetIP(compID, "FileCreated", fileName) ?? os.thisComputer.ip;
                 // 文件内容变更时读取新内容
                 string content = GetFileContent(comp, kv.Key);
+                Console.WriteLine("[FSEVENT] FileContentChanged " + compID + " " + kv.Key);
                 EventManager<PlayerFileSystemEvent>.InvokeAll(
                     new PlayerFileSystemEvent(comp, os, FileSystemAction.FileContentChanged, kv.Key, ip, null, null, content));
             }
@@ -232,6 +234,7 @@ internal static class FileSystemDetector
                     }
                 }
 
+                Console.WriteLine("[FSEVENT] " + (isFolder ? "FolderRemoved" : "FileRemoved") + " " + compID + " " + kv.Key);
                 EventManager<PlayerFileSystemEvent>.InvokeAll(
                     new PlayerFileSystemEvent(comp, os,
                         isFolder ? FileSystemAction.FolderRemoved : FileSystemAction.FileRemoved, kv.Key, ip));

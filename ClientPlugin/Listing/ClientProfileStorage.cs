@@ -114,11 +114,14 @@ public static class ClientProfileStorage
                 // [Client Name="xxx" End]
                 if (line.StartsWith("[Client Name=\"") && line.Contains("End]"))
                 {
-                    if (current != null)
+                    // 残缺检测：HostName 为空或 IP 端口缺失时跳过
+                    if (current != null && !string.IsNullOrWhiteSpace(current.HostName))
                     {
-                        Servers.Add(current);
-                        current = null;
+                        // 重复检测：同名服务器已存在则跳过
+                        if (!Servers.Any(s => s.HostName.Equals(current.HostName, StringComparison.OrdinalIgnoreCase)))
+                            Servers.Add(current);
                     }
+                    current = null;
                     inPlayers = false;
                     continue;
                 }
@@ -201,7 +204,7 @@ public static class ClientProfileStorage
                 sb.AppendLine("[PlayersStart]");
                 foreach (var acc in server.Accounts)
                 {
-                    sb.AppendLine($"[Player id=\"{acc.Id}\" name=\"{acc.Name}\" password=\"{acc.Password}\" savefile=\"{acc.SaveFilePath}\"]");
+                    sb.AppendLine(WriteAccountToIni(acc));
                 }
                 sb.AppendLine("[PlayersEnd]");
             }
@@ -288,12 +291,7 @@ public static class ClientProfileStorage
         var acc = server.Accounts.FirstOrDefault(a => a.Name.Equals(accountName, StringComparison.OrdinalIgnoreCase));
         if (acc == null) return false;
 
-        // 删除存档文件
-        if (!string.IsNullOrEmpty(acc.SaveFilePath) && File.Exists(acc.SaveFilePath))
-        {
-            try { File.Delete(acc.SaveFilePath); } catch { }
-        }
-
+        // OL 存档保留（备份用途），仅移除配置文件中的条目
         server.Accounts.Remove(acc);
         Save();
         return true;
@@ -311,27 +309,46 @@ public static class ClientProfileStorage
         return s.Substring(i, j - i);
     }
 
+    /// <summary>通用 INI 属性解析：将 [Player attr="val" ...] 中的 attr=val 反射写入对象</summary>
     private static ClientAccountStructure? ParsePlayer(string line)
     {
-        // [Player id="..." name="..." password="..." savefile="..."]
-        var id = ExtractAttribute(line, "id");
-        var name = ExtractAttribute(line, "name");
-        var password = ExtractAttribute(line, "password");
-        var savefile = ExtractAttribute(line, "savefile");
+        var obj = new ClientAccountStructure();
+        var type = typeof(ClientAccountStructure);
+        var fields = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 
-        if (string.IsNullOrEmpty(name)) return null;
-
-        return new ClientAccountStructure
+        // 解析 line 中所有 attr="val" 对
+        var regex = new System.Text.RegularExpressions.Regex(@"(\w+)=\""([^""]*)\""");
+        foreach (System.Text.RegularExpressions.Match m in regex.Matches(line))
         {
-            Id = id,
-            Name = name,
-            Password = password,
-            SaveFilePath = savefile
-        };
+            string key = m.Groups[1].Value;
+            string val = m.Groups[2].Value;
+
+            // 大小写不敏感匹配字段名（INI 属性名用小写，字段名用 PascalCase）
+            var field = Array.Find(fields, f => f.Name.Equals(key, StringComparison.OrdinalIgnoreCase));
+            if (field != null)
+            {
+                if (field.FieldType == typeof(string))
+                    field.SetValue(obj, val);
+                else if (field.FieldType == typeof(int) && int.TryParse(val, out int i))
+                    field.SetValue(obj, i);
+            }
+        }
+
+        return string.IsNullOrEmpty(obj.Name) ? null : obj;
     }
 
-    private static string ExtractAttribute(string s, string attrName)
+    /// <summary>通用 INI 写入：将对象的所有非空公共字段写成 [Player field="val" ...]</summary>
+    private static string WriteAccountToIni(ClientAccountStructure acc)
     {
-        return ExtractBetween(s, $"{attrName}=\"", "\"");
+        var sb = new System.Text.StringBuilder("[Player");
+        var type = typeof(ClientAccountStructure);
+        foreach (var field in type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+        {
+            var val = field.GetValue(acc)?.ToString();
+            if (!string.IsNullOrEmpty(val))
+                sb.Append($" {field.Name.ToLowerInvariant()}=\"{val}\"");
+        }
+        sb.Append(']');
+        return sb.ToString();
     }
 }

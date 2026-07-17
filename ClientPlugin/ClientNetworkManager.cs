@@ -100,7 +100,7 @@ internal static class ClientNetworkManager
         {
             AutoRecycle = true,
             UpdateTime = 15,
-            DisconnectTimeout = 5000
+            DisconnectTimeout = 30000
         };
         _netManager.Start();
         _netManager.Connect(ip, port, "HacknetServer");

@@ -97,6 +97,10 @@ internal static class GlobalEventBus
             // 快捷入口不需要，handler 通过 On<T> 订阅
         });
 
+        // ── 游戏保存事件 ──
+        EventManager<Pathfinder.Event.Saving.SaveEvent>.AddHandler(e =>
+            PlayerEventAPI.RaiseSaveGame(e.Os));
+
         // ── Pathfinder 自定义文本替换 → 写入全局替换字典 ──
         EventManager<TextReplaceEvent>.AddHandler(e =>
         {
