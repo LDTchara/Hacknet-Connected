@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>11</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>CS8500</NoWarn>
+    <OutputPath>..\libs\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Hacknet Source Code 5.069\**" />
+    <Compile Remove="Hacknet-Pathfinder-master\**" />
+    <Compile Remove="Keep trying\**" />
+    <EmbeddedResource Remove="Hacknet Source Code 5.069\**" />
+    <EmbeddedResource Remove="Hacknet-Pathfinder-master\**" />
+    <EmbeddedResource Remove="Keep trying\**" />
+    <None Remove="Hacknet Source Code 5.069\**" />
+    <None Remove="Hacknet-Pathfinder-master\**" />
+    <None Remove="Keep trying\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>..\libs\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx.Core">
+      <HintPath>..\libs\BepInEx.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="BepInEx.Hacknet">
+      <HintPath>..\libs\BepInEx.Hacknet.dll</HintPath>
+    </Reference>
+    <Reference Include="FNA">
+      <HintPath>..\libs\FNA.dll</HintPath>
+    </Reference>
+    <Reference Include="Hacknet">
+      <HintPath>..\libs\HacknetPathfinder.exe</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>..\libs\Mono.Cecil.dll</HintPath>
+    </Reference>
+    <Reference Include="MonoMod.RuntimeDetour">
+      <HintPath>..\libs\MonoMod.RuntimeDetour.dll</HintPath>
+    </Reference>
+    <Reference Include="MonoMod.Utils">
+      <HintPath>..\libs\MonoMod.Utils.dll</HintPath>
+    </Reference>
+    <Reference Include="PathfinderAPI">
+      <HintPath>..\libs\PathfinderAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ServerClientEventsMod">
+      <HintPath>..\libs\ServerClientEventsMod.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

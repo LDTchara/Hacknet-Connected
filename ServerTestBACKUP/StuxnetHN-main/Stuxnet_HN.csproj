@@ -1,0 +1,186 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{C107F285-D288-4141-AA38-D6C9046E2C61}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Stuxnet_HN</RootNamespace>
+    <AssemblyName>StuxnetHN</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <LangVersion>9.0</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>MSB3270</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <LangVersion>9.0</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>8.0</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>8.0</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>M:\SteamLibrary\steamapps\common\Hacknet\BepInEx\core\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="BepInEx.Core">
+      <HintPath>M:\SteamLibrary\steamapps\common\Hacknet\BepInEx\core\BepInEx.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="BepInEx.Hacknet">
+      <HintPath>M:\SteamLibrary\steamapps\common\Hacknet\BepInEx\core\BepInEx.Hacknet.dll</HintPath>
+    </Reference>
+    <Reference Include="FNA">
+      <HintPath>M:\SteamLibrary\steamapps\common\Hacknet\FNA.dll</HintPath>
+    </Reference>
+    <Reference Include="Hacknet">
+      <HintPath>M:\SteamLibrary\steamapps\common\Hacknet\Hacknet.exe</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>M:\SteamLibrary\steamapps\common\Hacknet\BepInEx\core\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="PathfinderAPI">
+      <HintPath>M:\SteamLibrary\steamapps\common\Hacknet\BepInEx\plugins\PathfinderAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="XMOD">
+      <HintPath>lib\XMOD.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Actions\CustomReplacements.cs" />
+    <Compile Include="Actions\DebugActions.cs" />
+    <Compile Include="Actions\Dialogue\ChapterTitle.cs" />
+    <Compile Include="Actions\Dialogue\VisualNovelTextActions.cs" />
+    <Compile Include="Actions\ForceConnect.cs" />
+    <Compile Include="Actions\FullscreenCredits.cs" />
+    <Compile Include="Actions\MiscActions.cs" />
+    <Compile Include="Actions\Nodes\NetMapSaveLoad.cs" />
+    <Compile Include="Actions\Nodes\PlaceOnNetMap.cs" />
+    <Compile Include="Actions\RadioActions.cs" />
+    <Compile Include="Actions\SaveActions.cs" />
+    <Compile Include="Actions\SequencerActions.cs" />
+    <Compile Include="Actions\StuxnetAction.cs" />
+    <Compile Include="Actions\ToggleAlertsIcon.cs" />
+    <Compile Include="Actions\VaultKeyActions.cs" />
+    <Compile Include="Actions\WriteToTerminal.cs" />
+    <Compile Include="Commands\DebugCommands.cs" />
+    <Compile Include="Commands\SMSCommands.cs" />
+    <Compile Include="Conditions\HasFlagsReplacements.cs" />
+    <Compile Include="Conditions\OnCutsceneEnd.cs" />
+    <Compile Include="Conditions\OnForkbombComplete.cs" />
+    <Compile Include="Conditions\OnSequencerKill.cs" />
+    <Compile Include="CoreClasses.cs" />
+    <Compile Include="Cutscenes\Actions\CutsceneActions.cs" />
+    <Compile Include="Cutscenes\Actions\StopCutscene.cs" />
+    <Compile Include="Cutscenes\StuxnetCutscenes.cs" />
+    <Compile Include="Daemons\BYOD\BYODCore.cs" />
+    <Compile Include="Daemons\BYOD\BYODDaemon.cs" />
+    <Compile Include="Daemons\CodeRedemptionDaemon.cs" />
+    <Compile Include="Daemons\DebugDaemon.cs" />
+    <Compile Include="Daemons\VaultDaemon.cs" />
+    <Compile Include="DrawStuxnetMainMenu.cs" />
+    <Compile Include="Executables\RadioV3.cs" />
+    <Compile Include="Executables\Wireshark.cs" />
+    <Compile Include="Extensions\GuiHelpers.cs" />
+    <Compile Include="Extensions\Texture2DExtensions.cs" />
+    <Compile Include="Extensions\Vector2Extensions.cs" />
+    <Compile Include="Extensions\XDocumentExtensions.cs" />
+    <Compile Include="Extensions\XmlReaderExtensions.cs" />
+    <Compile Include="Gamemode\GamemodeMenu.cs" />
+    <Compile Include="Gamemode\GamemodePatches.cs" />
+    <Compile Include="Gui\AnimatedElements.cs" />
+    <Compile Include="Gui\Extended\ExtendedElements.cs" />
+    <Compile Include="Gui\StuxnetGUI.cs" />
+    <Compile Include="Gui\TimedAnimation.cs" />
+    <Compile Include="Localization\Localizer.cs" />
+    <Compile Include="Patches\AnimatedThemeFilePatch.cs" />
+    <Compile Include="Patches\AnimatedThemeIllustrator.cs" />
+    <Compile Include="Patches\ApplyCustomReplacements.cs" />
+    <Compile Include="Patches\ComputerIconsPatch.cs" />
+    <Compile Include="Patches\ExtSequencerPatch.cs" />
+    <Compile Include="Patches\Illustrator.cs" />
+    <Compile Include="Patches\MessageboardFixes.cs" />
+    <Compile Include="Patches\MissionDisplayLogo.cs" />
+    <Compile Include="Patches\SavePatch.cs" />
+    <Compile Include="Patches\SettingsMenu\StuxnetMenuButtons.cs" />
+    <Compile Include="Patches\SettingsMenu\StuxnetSettingsMenu.cs" />
+    <Compile Include="Patches\Wireshark\WiresharkContents.cs" />
+    <Compile Include="Patches\Wireshark\WiresharkCompExecutors.cs" />
+    <Compile Include="Persistence\Achievements\AchievementActions.cs" />
+    <Compile Include="Persistence\Achievements\AchievementPatches.cs" />
+    <Compile Include="Persistence\Achievements\StuxnetAchievementsManager.cs" />
+    <Compile Include="Persistence\Achievements\AchievementsScreen.cs" />
+    <Compile Include="Persistence\PersistenceActions.cs" />
+    <Compile Include="Persistence\PersistenceManager.cs" />
+    <Compile Include="Quests\QuestActions.cs" />
+    <Compile Include="Quests\QuestManager.cs" />
+    <Compile Include="Quests\QuestPatches.cs" />
+    <Compile Include="Quests\QuestsPanel.cs" />
+    <Compile Include="Quests\QuestsXMODCompat.cs" />
+    <Compile Include="SMS\SMSActions.cs" />
+    <Compile Include="SMS\SMSIllustrator.cs" />
+    <Compile Include="SMS\SMSMessage.cs" />
+    <Compile Include="SMS\SMSPatches.cs" />
+    <Compile Include="SMS\SMSSaveLoad.cs" />
+    <Compile Include="SMS\SMSSystem.cs" />
+    <Compile Include="Static\States.cs" />
+    <Compile Include="StuxnetConfig.cs" />
+    <Compile Include="StuxnetCore.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".editorconfig" />
+    <None Include=".gitignore" />
+    <None Include="app.config" />
+    <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="docs\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="AfterBuild">
+    <Delete Files="Stuxnet.Audio/lib/$(TargetName).dll" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).dll" DestinationFolder="Stuxnet.Audio/lib" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).dll" DestinationFolder="ReleaseFiles/" />
+  </Target>
+</Project>

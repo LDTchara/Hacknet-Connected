@@ -1,0 +1,53 @@
+<PlayersConfig>
+    <PlayersCount num="3" /> <!--这表示作者设置游玩玩家数必须为3-->
+    <PlayerToReplacements>
+        <Globle>
+            <PlayerReplacementsGroup name="p1" playerid="1">
+                <PTR Org="#PLAYERNAME#" Curr="#P1NAME#" />
+                <PTR Org="#PLAYER_IP#" Curr="#P1_IP" />
+            <PlayerReplacementsGroup>
+            <PlayerReplacementsGroup name="p2" playerid="2">
+                <PTR Org="#PLAYERNAME#" Curr="#P2NAME#" />
+                <PTR Org="#PLAYER_IP#" Curr="#P2_IP" />
+            <PlayerReplacementsGroup>
+            <PlayerReplacementsGroup name="p3" playerid="3">
+                <PTR Org="#PLAYERNAME#" Curr="#P3NAME#" />
+                <PTR Org="#PLAYER_IP#" Curr="#P3_IP" />
+            <PlayerReplacementsGroup>
+
+            <!--
+            Globle中存储了3个玩家对应各自替换符的含义。作者直接写#P1NAME#
+            即可获取游戏玩家选择了在游戏介绍中的p1名称的剧情角色的节点名称
+
+            这类似一个剧本玩法，拓展作者开始时会给出三个可选择的角色，分别对应这里的三个name，
+            但这三个name只是拿来给作者自己区分的。
+            我们在拓展文件直接写这些新的自替换符即可
+
+            PS：这里我们一会对原版的#PLAYERNAME#和#PLAYER_IP#补丁为实际客户端的选择（如果是服务端，我们不管）
+            
+            PS:这里的playerid指的就是服务端存储的用于区分玩家的每个服务器分配玩家的playerid
+
+            -->
+        <Globle/>
+        <Private>
+            <PlayerReplacementsGroup name="mission1-private" num="2">
+                <Player name="1" playerid="">
+                    <PTR Org="#PLAYERNAME#" Curr="#M-P1NAME#" />
+                    <PTR Org="#PLAYER_IP#" Curr="#M-P1_IP" />
+                <Player/>
+                <Player name="2" playerid="">
+                    <PTR Org="#PLAYERNAME#" Curr="#M-P2NAME#" />
+                    <PTR Org="#PLAYER_IP#" Curr="#M-P2_IP" />
+                <Player/>
+            <PlayerReplacementsGroup>
+        <Private/>
+        <!--
+        private的标签下存储了局部的自替换符。num表示这一个支线任务需要的人数，name是作者自己用来区分填写的。
+        然后就是跟上面一样的自替换标签对照组，
+        请注意，尽管这是局部的，但是局部的与局部的，局部的与全局的之间均不能重复。
+        
+        ps:对于private，由于支线任务不一定做了，所以我们允许playerid暂时为空。
+        -->
+    <PlayerToReplacements>
+
+<PlayersConfig/>

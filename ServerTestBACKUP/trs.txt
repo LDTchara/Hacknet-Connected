@@ -1,0 +1,145 @@
+● 好，从种子注入到节点渲染，逐层拆。
+▏ 
+▏ 问题根因
+▏ 
+▏ 种子同步让服务端和客户端的 playerComp 完全一样——相同 IP、相同位置、相同 idName。
+▏ 
+▏ 服务端视角
+▏ 
+    CreateAccountPatch.Prefix() 触发
+      → WorldSeedSync.Initialize(seed=42)
+      → Utils.random.ReSeed(42)
+      → new OS()
+        → OS构造函数第219行：
+          this.thisComputer = new Computer("", NetworkMap.generateRandomIP(), compLocation, 5, 4, this)
+          //              IP = Utils.random.Next(254).Next(254).Next(254).Next(254) = 192.168.1.1
+          //       位置坐标 = compLocation（也走 Utils.random）= (0.8, 0.8)
+          this.thisComputer.idName = "playerComp"
+      → sman.AddScreen(oS)
+      → 下一帧 OS.LoadContent()
+        → 扩展加载 → ExtensionLoader 读 Nodes/*.xml
+        → 如果扩展XML里也有 <Computer idName="playerComp">：
+          遇到 playerComp → ComputerLoader 检查 idName
+          → 如果 os.netMap 里已经有了 os.thisComputer（idName=playerComp）→ 跳过加载扩展定义的那个
+          → 所以最终 netMap 里只有一个 playerComp：OS 构造函数创建的
+▏ 
+▏ 客户端视角
+▏ 
+    客户端连上服务端
+      → 收到 WORLD_SEED:42
+      → GameLauncher.LoginAndStart()
+        → WorldSeedSync.Initialize(42)
+        → Utils.random.ReSeed(42)
+        → new OS()
+          → 同一套逻辑：thisComputer = playerComp @ 192.168.1.1 @ (0.8, 0.8)
+          → idName = "playerComp"
+      → sman.AddScreen(oS)
+      → 下一帧 OS.LoadContent()
+        → 扩展加载 → 同样的扩展、同样的种子
+        → 同样跳过扩展定义的 playerComp（因为已经存在了）
+▏ 
+▏ 此时服务端和客户端的 thisComputer 完全一样——IP 和位置都一样。
+▏ 
+▏ 事件同步导致重复
+▏ 
+    服务端 ExtensionLoader.LoadNewExtensionSession()
+      → 加载玩家节点时，playerComp 被设为初始可见
+      → 触发 EVENT:NODE_VIS:playerComp:True → 通过 Pipe → 控制台 → 广播给所有客户端
+    
+    客户端收到 EVENT:NODE_VIS:playerComp:True
+      → EventReceiver.HandleNodeVisibility("playerComp:True")
+      → 在 os.netMap.nodes 里找 idName == "playerComp"
+      → 找到了自己本地生成的 playerComp → 设为可见
+      → 没问题 ← 这是对的
+    
+    但问题出在：
+    服务端也会广播自己的 playerComp 的 IP/位置变化
+    客户端收到 EVENT:NODE_IP:playerComp:192.168.1.1
+      → 在 os.netMap.nodes 里又找到一个 playerComp
+      → 此时 netMap 里同一个位置有：
+        [节点A] = 客户端的 thisComputer（idName=playerComp, ip=192.168.1.1, pos=(0.8,0.8)）
+        [节点B] = 服务端同步来的 phantom 节点（同一位置，但 thisComputer 指向节点A）
+    
+    为什么节点B只有一个外框？
+    因为 NetworkMap.Draw 里有一个特殊逻辑（NetworkMap.cs 第 510 行）：
+      if (node == os.thisComputer)
+        → 画 thisComputerNode（绿色本机图标）
+      但 netMap.nodes 里只能有一个 node == os.thisComputer
+      第二个 playerComp 走到 else 分支 → 只画普通节点外框
+    
+    为什么点击其他节点后外框消失？
+    因为 Connect 触发后 os.connectedComp 变了 → Draw 逻辑走到不同的 if 分支
+    → Phantom 节点不再被高亮 → 视觉上消失了（其实还在 netMap 里）
+▏ 
+▏ 修复方案
+▏ 
+▏ 每个玩家的 playerComp 需要唯一的 IP 和位置，不能所有客户端都用同一个种子生成的同一个值。
+▏ 
+▏ 在 `new OS()` 之前、`ReSeed` 之后，根据玩家 slot 重新生成 IP：
+▏ 
+    // CreateAccountPatch.Prefix（服务端）或 GameLauncher（客户端）
+    WorldSeedSync.Initialize(seed);
+    // 消耗掉 playerComp 的随机数，但用玩家独有的偏移量
+    int playerSlot = GetPlayerSlot(); // 0 = 服务端管理员, 1 = 客户端A, 2 = 客户端B
+    
+    // 跳过 Utils.random 默认消耗的 N 次（让 playerComp IP 不同于默认值）
+    // 用 slot 派生的种子重新生成 IP
+    string playerIP = GenerateUniqueIP(masterSeed, playerSlot);
+    // 在 new OS() 之后立即覆盖 thisComputer.ip
+▏ 
+▏ 更具体的实现：
+▏ 
+    // 在 new OS() 之前，先注入一个派生子种子
+    // 这样 playerComp 的 IP 会基于 (masterSeed + playerSlot) 生成
+    int childSeed = WorldSeedSync.GetNextChildSeed(playerSlot);
+    Utils.random.ReSeed(childSeed);
+    var oS = new OS();
+    oS.thisComputer.ip = oS.thisComputer.adminIP; // 确保 adminIP 和 IP 一致
+    
+    // 然后恢复主种子，让后续的世界加载用回主种子
+    Utils.random.ReSeed(masterSeed);
+▏ 
+▏ 同时 EventReceiver 过滤远端 playerComp 的 NODE_VIS/NODE_IP 事件：
+▏ 
+▏ 服务端广播的 EVENT:NODE_VIS:playerComp:True 包含了服务端自己的 playerComp 信息。客户端应该在 EventReceiver 中判断：如果事件的
+▏ idName 是 "playerComp"，并且源 IP 不是自己的 IP，就忽略这条事件。
+▏ 
+    收到 EVENT:NODE_IP:playerComp:192.168.1.1
+      → 查 os.thisComputer.ip
+      → 如果 192.168.1.1 == os.thisComputer.ip → 这是自己的节点，处理
+      → 如果 192.168.1.1 != os.thisComputer.ip → 这是远端玩家的节点，创建/更新一个独立的 Computer 对象
+▏ 
+▏ 这样每个玩家看到的是：
+▏ - 自己的 playerComp（绿色本机图标）在唯一 IP
+▏ - 远端玩家的 playerComp 作为独立节点（蓝色/白色普通节点图标）在另一个 IP
+
+OCR LOGS：：
+
+thinking done:3.0s
+NowIcan see the issue clearly.SaveFileManager.StorageMethods?[o] is used EVERYwHERE. The type ofStorageMethods[o] depends
+on what Pathfinder registeredfirst:
+If Pathfinder's OnlineSaveStorage registers first StorageMethods[o]is Online COL)
+- If the native LocalSaveStorageregisters first StorageMethods[o]isnative
+iFull reasoning in Ctrl+O
+问题在SaveFileManager.StorageMethods?[o]-Pathfinder注册的存储驱动顺序不固定：
+加载路径：
+SaveFileManager.StorageMethods[o]可能是OnlineSaveStorage(OL)
+也可能是LocalSaveStorage（原生）
+1
+GetFilePathForLogin("LDTchara","pass")→"save_LDTchara.xml"
+1
+StorageMethods[o].FileExists("save_LDTchara.xml")
+如果 [o] 是OL：
+去Documents/MyGames/HacknetPathfinder/Accounts/扩展名/search_LDTchara.xml
+如果[o]是原生：
+去Documents/My Games/Hacknet/Accounts/search_LDTchara.xml
+因为StorageMethods的注册顺序不定，所以同一次启动和下一次启动可能不一样。AC看到"一会OL一会原生"就是这个原因。
+修复：不要只取｀[o]`，遍历全部StorageMethods:
+IStorageMethod GetActualSaveStorage(
+foreach (var storage in SaveFileManager.StorageMethods)
+if (storage?.FileExistsCfilePath)==true)
+return storage;
+子
+1都不存在，用第一个
+returnSaveFileManager.StorageMethods?[o];
+GameLauncher的HHBs双写已经是正确的方向一但它只解决了"写入时的冗余"，没解决“读取时的歧义”。

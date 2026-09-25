@@ -1,0 +1,227 @@
+<center>
+<h1>Stuxnet.Actions</h1>
+</center>
+
+---
+
+## Table of Contents
+* [RadioV3](#radiov3-actions)
+* [Sequencer](#sequencer-actions)
+* [Saves](#save-actions)
+* [Vault Keys](#vault-actions)
+* [Dialogue](#dialogue-actions)
+* [Nodes](#node-actions)
+* [Wildcards](#custom-replacementswildcards)
+* [Misc.](#misc-actions)
+* [Persistence](#persistence)
+
+---
+
+# RadioV3 Actions
+## Allowing/Preventing Radio Access
+### `<PreventRadioAccess DelayHost="delay" Delay="3.0" />`
+Prevents radio access to the user. Will show the text "-- Radio access is denied --" on the executable display. This can be used for cutscenes, sequencers, or any other time you may not want the player to have control over the music.
+
+### `<AllowRadioAccess DelayHost="delay" Delay="5.0" />`
+Does the opposite of above.
+
+## Adding/Removing Songs
+### `<AddSongToRadio SongID="song1,song2" />`
+Adds access to the song ID(s) in the radio for the player. Multiple songs can be added at once with a comma.
+
+[More information about song IDs](StuxnetConfig.md#audio)
+
+### `<RemoveSongFromRadio SongID="song2" />`
+Removes access to the song Id in the radio for the player. Only one song can be removed at a time.
+
+[More information about song IDs](StuxnetConfig.md#audio)
+
+---
+
+# Sequencer Actions
+### `<ChangeSequencerManually RequiredFlag="testflag1" TargetID="testseq1" SpinUpTime="5" ActionsToRun="Actions/TestSequencers/1.xml" />`
+Manually changes information for the `ESequencer`.
+
+### `<ChangeSequencerFromID SequencerID="seq3" />`
+Changes information for the `ESequencer` as defined for the `SequencerID` in [your global Stuxnet config file](StuxnetConfig.md#sequencers).
+
+### `<ClearCustomSequencer DelayHost="delay" Delay="5.0" />`
+Clears any custom information for the sequencer and defaults to whatever is in `ExtensionInfo.xml`.
+
+---
+
+# Save Actions
+## Enabling/Disabling Saves
+All of the below actions are delayable.
+
+### `<DenySaves />`
+Denies saves for the user.
+
+### `<AllowSaves />`
+The opposite of above.
+
+### `<RequireFlagForSaves Flag="string" AvoidFlag="bool" />`
+Requires a flag in order for the user to be able to save.
+* `Flag` - The flag the user must have in order to save. If empty, then the user will no longer require a flag to save.
+* `AvoidFlag` - Whether or not to *avoid* the above flag in order for the user to save.
+    * For example, if `Flag` is set to "badflag" and `AvoidFlag` is set to "true", then the user will not be able to save so long as they have the "badflag" flag applied to them.
+
+---
+
+# Vault Actions
+For use with the [Vault Daemon](./Daemons.md#vault-daemon).
+
+### `<AddVaultKey KeyName="TestVault" /> / <RemoveVaultKey KeyName="TestVault" />`
+**Delayable.** Adds/removes a key for the set key name of the vault. If the user has not visited the vault yet, adding a vault key will set the key amount to 1, while removing the key will set the key amount to 0.
+
+A maximum of 10 keys can be added (unrelated to the vault daemon itself) and the user can have a minimum of 0 keys. If you go over or under these limits, nothing will happen. It just won't add/remove the key.
+
+---
+
+# Dialogue Actions
+Actions relating to dialogue / "story elements"
+
+## Chapter Titles
+### `<ShowChapterTitle ChapterTitle="string" ChapterSubTitle="string" [HideTopBar="bool" BackingOpacity="float"] />`
+**Delayable.** Shows a chapter title and subtitle. This hides all user modules, along with the top bar if `HideTopBar` is `true`.
+* `ChapterTitle` - The title. Shows up in the Hacknet logo font. e.g. `"Chapter 1"`
+* `ChapterSubTitle` - Admittedly, a misleading name. Typically you'll put the *actual* chapter title here. e.g. `"The first chapter"`
+* `HideTopBar` - Whether or not to hide the top bar. Defaults to `true`, and you'll probably want to keep it like that.
+* `BackingOpacity` - How opaque the dimmed background should be. Higher values means the background will be less visible.
+
+**NOTE**: You should *not* save the player's game while the chapter title is shown, it'll break things! Only save before you've shown it, or after you've hidden it.
+
+### `<HideChapterTitle />`
+**Delayable.** Does the opposite of above. This will also enable the alerts icon, even if you've disabled it with `DisableAlertsIcon`. If you really need the alerts icon to stay hidden, you can just disable it right after hiding the chapter title.
+
+## Dialogue
+### `<ShowCTCDialogue [TextSpeed="int" HideTopBar="bool" TextColor="int,int,int" EndDialogueActions="string" BackingOpacity="float"]>string</ShowCTCDialogue>`
+Shows dialogue that, when completed, will prompt the user to click the screen.
+* `TextSpeed` - Multiplier of the default text speed (10chars/s)
+* `HideTopBar` - Whether or not to hide the top bar. Defaults to `true`, and you'll probably want to keep it like that.
+* `TextColor` - The color of the text. Similar to how theme colors are done. Defaults to white, or `255,255,255`.
+* `EndDialogueActions` - Actions to run when the user clicks the screen after being prompted. If omitted, then the top bar and module visibility will return when the user has clicked.
+* `BackingOpacity` - How opaque the dimmed background should be. Higher values means the background will be less visible.
+
+### `<ShowAutoDialogue [TextSpeed="1" HideTopBar="false" TextColor="255,0,0" ContinueDelay="3"]>string</ShowCTCDialogue>`
+Same as above, but for auto text. Auto text will fire end dialogue actions after the delay is finished. No user input required.
+* `ContinueDelay` - How long to wait until after the text is finished (in seconds) until `EndDialogueActions` is fired. Defaults to `0`.
+
+## Fullscreen Credits
+### `<ShowFullscreenCredits CreditsPath="string" />`
+**Delayable.** Shows fullscreen credits, automatically hiding every module.
+* `CreditsPath` - the path to the real-life `.txt` file that contains the credits data.
+    * Use the same formatting you do for credits data in vanilla.
+
+## Conditions
+### `<OnFullscreenCreditsEnd>`
+Runs a set of actions when the current fullscreen credits end.
+
+---
+
+# Node Actions
+### `<PlaceNodeOnNetMap TargetCompID="jmail" Offset="float,float" />`
+**Delayable.** Places the target node onto the netmap where you specify it.
+* `TargetCompID` - The ID of the target node.
+* `Offset` - The offset from the starting position. Percentage based. Required.
+    * For example, an offset of `0.5,0.25` will place the node halfway across the netmap, and a halfway to the center vertically.
+
+### `<SaveNetMap [Overwrite="bool" AutoClear="bool"] />`
+**Delayable.** Saves the current netmap state to a cache.
+* `Overwrite` - If `true`, then the current netmap cache will be overwritten.
+* `AutoClear` - If `true`, the current list of visible netmap nodes will be cleared.
+
+### `<LoadNetMap [Append="bool"] />`
+**Delayable.** Loads the cached netmap. (Warning: this WILL throw an exception if you didn't run SaveNetMap first!)
+* `Append` - If `true`, it will append the currently visible nodes to the cached list. If `false`, the netmap's list will be replaced with the cache.
+* Note: Running this will also clear the cache.
+
+---
+
+# Custom Replacements/"Wildcards"
+Create your own wildcards with these actions. This will only affect nodes that the player is not currently connected to. To keep immersion, you probably shouldn't use any custom wildcards in the base files of the player's node. If you use the same name twice, it will overwrite that wildcard's value.
+
+## Constants
+### `<AddCustomWildcard Name="string" Value="string" />`
+Adds a custom wildcard with a constant value.
+
+* `Name` - The name. This will be upper-cased in the code and surrounded by `#`s.
+    * For example, `Name="Test_Wildcard"` would be saved as `#TEST_WILDCARD#`.
+* `Value` - The value for the wildcard.
+
+## Node Replacements
+### `<AddNodeIPWildcard Name="string" CompID="string" />`
+Adds the IP of a node as a wildcard.
+
+* `Name` - Same as above, but `_IP` will be added to it.
+    * For example, `Name="BitComp"` would be saved as `#BITCOMP_IP#`.
+* `CompID` - Case-sensitive, the ID for the target node.
+
+### `<AddNodeAdminWildcard Name="string" CompID="string" />`
+Adds the admin pass of a node as a wildcard.
+
+* `Name` - Same as above, but `_PASS` will be added to it.
+    * For example, `Name="BitComp"` would be saved as `#BITCOMP_PASS#`.
+* `CompID` - Case-sensitive, the ID for the target node.
+
+---
+
+# Misc. Actions
+### `<DisableAlertsIcon /> / <EnableAlertsIcon />`
+**Delayable.** Turns the alert icon (email, irc, etc.) off and on, respectively. And yes, that means *completely* off. Nothing will be at the top right of the user's game window. Useful for cutscenes, sequencers, blah blah blah. You get the gist of what most of these actions are for.
+
+### `<ForceConnectPlayer TargetCompID="CompID" LikeReallyForce="bool" />`
+**Delayable.** Forcefully connects the user to the target computer, or at least tries to.
+
+Setting `LikeReallyForce` to `"true"` will constantly try to connect the player to the target computer. It's recommended **NOT** to use this unless you have some specific edge case where you *absolutely* have to.
+
+### `<WriteToTerminal [Quietly="bool"]>string</WriteToTerminal>`
+**Delayable.** Ported from [LunarOSPathfinder](https://github.com/AutumnRivers/LunarOSPathfinder#writetoterminal-quietlyboolmessagewritetoterminal).
+
+### `<ForceCloseGame />`
+**Delayable.** Does what it says on the tin. Forcibly closes the game. Use this *sparingly*!
+
+# Misc. Conditions
+### `<OnForkbombComplete [PreventCrash="bool" DiscardOnKilled="bool"]>`
+A condition that runs a set of actions when a forkbomb completes on the player PC.
+* `PreventCrash` - If `true`, then the forkbomb will be killed on completion without crashing the player's PC.
+    * The action set will stil run regardless of this value.
+* `DiscardOnKilled` - If `true`, then the action set will be discarded the next time the player kills a forkbomb.
+
+## Replacements
+### `<HasFlagsStx requiredFlags="string,string" [CheckOnce="bool"]>`
+Drop-in replacement for `HasFlags` that adds `CheckOnce` functionality.
+
+### `<DoesNotHaveFlagsStx Flags="string,string" [CheckOnce="bool"]>`
+Same as above, but for `DoesNotHaveFlags`.
+
+---
+
+# Persistence
+## Actions
+All the actions below are *delayable*!
+
+### `<AddPersistentFlag Flag="string" />`
+Adds the flag to persistent data. If the flag already exists, nothing happens.
+
+### `<RemovePersistentFlag Flag="string" />`
+Does the opposite of above. If the flag already doesn't exist, nothing happens.
+
+### `<ClearPersistentFlags />`
+Clears *all* flags from persistence.
+
+## Achievements
+### `<CollectAchievement Name="string" Quietly="bool(default=false)" />`
+Collects an achievement with name of `Name`.
+* If `Quietly` is `true`, then the "Achievement Unlocked!" pop-up will not show.
+
+Unlike flags, you cannot take away achievements, you can only unlock them. There are also no conditions for detecting what achievements a player has. This is by design - achievements are purely aesthetic. Give the player a sense of pride and accomplishment. However, when all achievements are unlocked, the persistent flag `collected_all_achievements` will automatically be added.
+
+## Conditions
+### `<HasPersistentFlags Flags="string[,string,string...]" CheckOnce="bool">`
+Runs a set of actions if the persistent data has the set of flags.
+* `CheckOnce` - Checks once if the player does have the flags, then removes itself.
+    * Idea shamelessly taken from XMOD.
+
+### `<DoesNotHavePersistentFlags Flags="string[,string,string...]" CheckOnce="bool">`
+Opposite of above.
