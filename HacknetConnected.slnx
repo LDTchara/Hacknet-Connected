@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="ClientPlugin/ClientPlugin.csproj" />
+  <Project Path="HNC.Chat.Core/HNC.Chat.Core.csproj" />
   <Project Path="HNC.Sync.Abstractions/HNC.Sync.Abstractions.csproj" />
   <Project Path="HNC.Sync.Adapters/HNC.Sync.Adapters.csproj" />
   <Project Path="HNC.Sync.Core/HNC.Sync.Core.csproj" />

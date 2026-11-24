@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ChatHub：一个同时带 IRC 和 DHS 的节点，两个频道里都包含"所有玩家"。
+
+  玩家用占位符表示（#P1NAME#、#P2NAME#），加载时被替换成各自选了该角色的玩家的名字。
+  占位符来自 Players-Cli.xml 的 Globle 组 + Config.tmp 的 @G 段，所以：
+    - 每台机器（服务端和每个客户端）的 Config.tmp 里都必须列出全部角色，例如
+        @G { 玩家A:p1; 玩家B:p2; }
+    - 想加第三个玩家：Players-Cli.xml 里加 p3 的 PTR，然后把下面带 [p3] 的注释行取消注释即可。
+
+  使用：
+    1. 放进扩展的 Nodes 文件夹（Extensions/<扩展>/Nodes/ChatHub.xml）。
+    2. 让玩家能找到它：在别的节点里加 <dlink target="chatHub" />，
+       或在 ExtensionInfo.xml 的 <StartingVisibleNodes> 里加上 chatHub。
+    3. DHSDaemon 需要安装 Hacknet Labyrinths DLC，否则加载会报 "LABYRINTHS DLC REQUIRED"。
+-->
+<Computer id="chatHub" name="HNC Chat Hub" security="2" allowsDefaultBootModule="false" type="1">
+  <!-- 不写 ip 属性：用系统分配的 IP（两端由同一个种子生成，是一致的）。要固定就加 ip="x.x.x.x"。 -->
+  <adminPass pass="hubadmin" />
+
+  <ports>21, 22, 80</ports>
+  <portsForCrack val="101" />
+  <trace time="300" />
+
+  <file path="home" name="README.txt">HNC Chat Hub
+This node hosts the IRC channel and the DHS board.
+Every player is a member of both.</file>
+
+  <!-- ═══════════════ IRC：所有玩家都是频道成员 ═══════════════ -->
+  <IRCDaemon themeColor="90,160,255" name="HNC IRC" needsLogin="false">
+    <user name="Channel" color="240,234,81" />
+    <user name="#P1NAME#" color="100,200,255" />
+    <user name="#P2NAME#" color="255,170,90" />
+    <!-- [p3] <user name="#P3NAME#" color="170,255,140" /> -->
+
+    <post user="Channel">Welcome to the hub. Members: @#P1NAME#, @#P2NAME#.</post>
+    <!-- [p3] 把上一行的成员列表加上 @#P3NAME#，并取消上面 p3 的 user 行的注释 -->
+    <post user="Channel">Use @everyone to address all members, or @name for one person.</post>
+  </IRCDaemon>
+
+  <!-- ═══════════════ DHS：所有玩家都是 DHS 成员（agent） ═══════════════ -->
+  <DHSDaemon groupName="HNC Hub" themeColor="38,201,155"
+             addsFactionPointOnMissionComplete="true"
+             autoClearMissionsOnPlayerComplete="true"
+             allowContractAbbandon="false">
+    <agent name="#P1NAME#" pass="hubpass1" color="100,200,255" />
+    <agent name="#P2NAME#" pass="hubpass2" color="255,170,90" />
+    <!-- [p3] <agent name="#P3NAME#" pass="hubpass3" color="170,255,140" /> -->
+  </DHSDaemon>
+</Computer>

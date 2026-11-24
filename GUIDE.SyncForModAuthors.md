@@ -226,7 +226,8 @@ HncSync.RegisterSerializer(new ColorSerializer());   // 后注册的优先，可
 | `MessageBoardDaemon` | ✅ 已适配 | 同步 `ImageBoard`（`Threads` 下的帖子文件） |
 | `IRCDaemon` | ✅ 已适配 | 同步 `IRC`（`active.log`、`users.cfg`），排除 `runtime`。`active.log` 是单个文件，每次新消息会重发整个文件 |
 | `UploadServerDaemon` | ✅ 已适配 | 同步它的 `Foldername`（含 `Uploads`） |
-| `MissionListingServer`、`MissionHubServer`、`DLCHubServer` | ⛔ 有意排除 | 内存里有活的 `ActiveMission` 对象列表，被任务完成逻辑直接引用；只同步文件夹会让列表和文件夹脱节。要和 Scope / 私有任务一起设计 |
+| `DLCHubServer`（DHS）的聊天记录 | ✅ 已适配（仅 `HomeBase` 根目录） | 只同步聊天记录所在的 `HomeBase` 根目录（`active.log` 等），排除 `contracts` / `archive`（任务相关）和 `runtime`（延迟动作队列）。为 IRC/DHS 发消息功能（`README.IrcChat.md`）加的 |
+| `MissionListingServer`、`MissionHubServer`、`DLCHubServer` 的**任务部分** | ⛔ 有意排除 | 内存里有活的 `ActiveMission` 对象列表，被任务完成逻辑直接引用；只同步文件夹会让列表和文件夹脱节。要和 Scope / 私有任务一起设计 |
 | `DatabaseDaemon`、`WebServerDaemon`、`OnlineWebServerDaemon`、`Academic/Medical/DeathRow DatabaseDaemon`、`MarkovTextDaemon`、`SongChangerDaemon`、`LogoDaemon`、`CustomConnectDisplayDaemon`、`DLCCreditsDaemon` | ❔ 未评估，预计无需 | 按名字归类：内容在加载时从文件/XML 读入，运行时几乎只读。运行时改它们的文件由文件系统事件覆盖 |
 | `PointClickerDaemon`、`HeartMonitorDaemon`、`AircraftDaemon`、`PorthackHeartDaemon`、`ISPDaemon`、`AddEmailDaemon`、`WhitelistConnectionDaemon`、`AuthenticatingDaemon` 子类 | ❔ 未评估 | 状态不在文件夹里（计数、动画进度、会话认证……），没有读过；需要时逐个分析 |
 

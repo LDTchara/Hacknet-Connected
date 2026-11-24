@@ -101,6 +101,9 @@ namespace HNC.Sync.Adapters
             // IRC 的 runtime 子文件夹是 DelayableActionSystem 的待执行动作队列：
             // 同步它会让每个客户端都执行一遍，所以排除。
             AddHandler(typeof(IRCDaemon), d => "IRC", "runtime");
+            // DHS（DLCHubServer）的聊天记录 active.log 在 HomeBase 根目录。
+            // contracts / archive 是任务相关（持有活的 ActiveMission，见指南），runtime 是延迟动作队列，都排除。
+            AddHandler(typeof(DLCHubServer), d => "HomeBase", "contracts", "archive", "runtime");
             AddHandler(typeof(UploadServerDaemon), d => ((UploadServerDaemon)d).Foldername);
         }
 

@@ -57,7 +57,7 @@
       <HintPath>libs\PathfinderAPI.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <ProjectReference Include="..\ServerClientEventsMod\ServerClientEventsMod.csproj">
+    <ProjectReference Include="..\ServerClientEventsMod\ServerClientEventsMod.csproj" Condition="'$(SingleDll)' != 'true'">
       <Private>true</Private>
     </ProjectReference>
 
@@ -67,9 +67,33 @@
   <!-- HNC.Sync：不嵌入 Costura，保持为插件目录里的独立 dll——
        这样本插件和第三方 mod 引用的 HNC.Sync.Abstractions 是同一个程序集实例（HncSync.Runtime 是静态的）。 -->
   <ItemGroup>
-    <ProjectReference Include="..\HNC.Sync.Abstractions\HNC.Sync.Abstractions.csproj" />
-    <ProjectReference Include="..\HNC.Sync.Core\HNC.Sync.Core.csproj" />
-    <ProjectReference Include="..\HNC.Sync.Adapters\HNC.Sync.Adapters.csproj" />
+    <ProjectReference Include="..\HNC.Sync.Abstractions\HNC.Sync.Abstractions.csproj" Condition="'$(SingleDll)' != 'true'" />
+    <ProjectReference Include="..\HNC.Sync.Core\HNC.Sync.Core.csproj" Condition="'$(SingleDll)' != 'true'" />
+    <ProjectReference Include="..\HNC.Sync.Adapters\HNC.Sync.Adapters.csproj" Condition="'$(SingleDll)' != 'true'" />
+  </ItemGroup>
+
+
+  <!-- IRC / DHS 发消息：共享源码（两个插件各编译一份，不会同时加载），纯逻辑在 HNC.Chat.Core（Costura 嵌入） -->
+  <ItemGroup>
+    <Compile Include="..\Shared\IrcChat\*.cs" LinkBase="IrcChat" />
+    <Compile Include="..\Shared\RemovableTags\*.cs" LinkBase="RemovableTags" />
+    <ProjectReference Include="..\HNC.Chat.Core\HNC.Chat.Core.csproj" Condition="'$(SingleDll)' != 'true'" />
+  </ItemGroup>
+
+  <!-- ═══ 单 dll 合并构建（测试用）：dotnet build -p:SingleDll=true ═══
+       把 ServerClientEventsMod、HNC.Sync.*、HNC.Chat.Core 的源码直接编进本插件，输出到 Output\ClientPlugin.Single\ 一个 dll。
+       普通构建（不带这个属性）完全不受影响。
+       限制：HNC.* 类型变成本程序集的一部分，第三方 mod 引用独立的 HNC.Sync.Abstractions.dll 时绑不到它们。 -->
+  <PropertyGroup Condition="'$(SingleDll)' == 'true'">
+    <OutputPath>..\Output\ClientPlugin.Single\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(SingleDll)' == 'true'">
+    <Compile Include="..\ServerClientEventsMod\**\*.cs" Exclude="..\ServerClientEventsMod\obj\**;..\ServerClientEventsMod\bin\**" LinkBase="_merged\EventsMod" />
+    <Compile Include="..\HNC.Sync.Abstractions\**\*.cs" Exclude="..\HNC.Sync.Abstractions\obj\**;..\HNC.Sync.Abstractions\bin\**" LinkBase="_merged\Sync.Abstractions" />
+    <Compile Include="..\HNC.Sync.Core\**\*.cs" Exclude="..\HNC.Sync.Core\obj\**;..\HNC.Sync.Core\bin\**" LinkBase="_merged\Sync.Core" />
+    <Compile Include="..\HNC.Sync.Adapters\**\*.cs" Exclude="..\HNC.Sync.Adapters\obj\**;..\HNC.Sync.Adapters\bin\**" LinkBase="_merged\Sync.Adapters" />
+    <Compile Include="..\HNC.Chat.Core\**\*.cs" Exclude="..\HNC.Chat.Core\obj\**;..\HNC.Chat.Core\bin\**" LinkBase="_merged\Chat.Core" />
+    <Reference Include="System.Web.Extensions" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- IRC / DHS 发消息的纯逻辑：@ 解析、节点/账户附件、Tab 补全。
+       刻意不依赖 Hacknet / Harmony，这样能在单元测试里验证。游戏相关的界面和命令在 Shared/IrcChat。 -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>11</LangVersion>
+    <RootNamespace>HNC.Chat</RootNamespace>
+    <OutputPath>..\Output\HNC.Chat\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+</Project>

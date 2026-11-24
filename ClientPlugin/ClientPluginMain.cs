@@ -69,7 +69,8 @@ public class ClientPluginMain : HacknetPlugin
     public override bool Load()
     {
         _harmony = new Harmony(ModGUID);
-        _harmony.PatchAll(typeof(ClientPluginMain).Assembly);
+        // 单 dll 合并构建时，ServerClientEventsMod 的 Load 也会 PatchAll 同一个程序集；这里去重
+        ServerClientEventsMod.Events.HarmonyPatchOnce.PatchAll(_harmony, typeof(ClientPluginMain).Assembly);
 
         // 加载配置
         ClientProfileStorage.Load();
@@ -92,6 +93,8 @@ public class ClientPluginMain : HacknetPlugin
         // 注册 selectplayer 命令
         SelectPlayerCommand.Register();
         SendMailCommand.Register();
+        HNC.IrcChat.IrcChatFeature.Register();
+        HNC.RemovableTags.RemovableTagsFeature.Register();
 
         // P0-1：此时所有插件已加载，给 PF/第三方程序集里的 Condition 补 scope 门控
         if (_harmony != null)

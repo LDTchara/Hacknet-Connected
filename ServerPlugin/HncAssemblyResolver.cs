@@ -77,7 +77,9 @@ internal static class HncAssemblyResolver
     private static Assembly? Resolve(object? sender, ResolveEventArgs args)
     {
         string? name = new AssemblyName(args.Name).Name;
-        if (name == null || !name.StartsWith("HNC.Sync.", StringComparison.OrdinalIgnoreCase))
+        if (name == null ||
+            !(name.StartsWith("HNC.Sync.", StringComparison.OrdinalIgnoreCase) ||
+              name.StartsWith("HNC.Chat.", StringComparison.OrdinalIgnoreCase)))
             return null;
 
         lock (Loaded)

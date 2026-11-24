@@ -20,7 +20,7 @@ public class ExtraEventsPlugin : HacknetPlugin
 
     public override bool Load()
     {
-        HarmonyInstance.PatchAll(typeof(ExtraEventsPlugin).Assembly);
+        HarmonyPatchOnce.PatchAll(HarmonyInstance, typeof(ExtraEventsPlugin).Assembly);
         ActionTriggerInterceptor.EnsurePatched();
         Instance = this;
         ReplacementCatalog.Initialize();

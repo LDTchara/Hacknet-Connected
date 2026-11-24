@@ -36,7 +36,8 @@ public class ServerPlugin : HacknetPlugin
     public override bool Load()
     {
         _harmony = new Harmony(ModGUID);
-        _harmony.PatchAll();
+        // 单 dll 合并构建时，ServerClientEventsMod 的 Load 也会 PatchAll 同一个程序集；这里去重
+        ServerClientEventsMod.Events.HarmonyPatchOnce.PatchAll(_harmony, typeof(ServerPlugin).Assembly);
         return true;
     }
 
@@ -48,6 +49,8 @@ public class ServerPlugin : HacknetPlugin
     public override void PostLoad()
     {
         ServerMail.RegisterCommand();
+        HNC.IrcChat.IrcChatFeature.Register();
+        HNC.RemovableTags.RemovableTagsFeature.Register();
 
         Console.WriteLine("[ServerPlugin.PostLoad] Scanning for static Random fields...");
 
