@@ -278,7 +278,21 @@ public static class GameLauncher
         // 遵循原生 Login 按钮流程检查存档
         // ════════════════════════════════════════════════════════
         // 遍历所有 StorageMethod 找有效存档（修复 [0] 指向不确定的问题）
-        bool saveExists = !string.IsNullOrEmpty(filePath)
+        // 服务端权威：服务端明确回复 NO_SAVE 且本次没收到存档 → 本地残留存档属于旧世界
+        // （或上次新游戏写下的空占位文件），加载它会得到和服务端不一致的地图
+        // （节点布局不同、找不到玩家节点）。备份后按新玩家处理，使用同步下来的世界种子。
+        bool discardLocalSave = false;
+        if (ClientPluginMain.ServerReportedNoSave && !ClientPluginMain.IsSaveFileReady
+            && !string.IsNullOrEmpty(filePath) && SaveFileHelper.SaveExists(filePath))
+        {
+            discardLocalSave = true;
+            Console.WriteLine("[GameLauncher] 服务端报告 NO_SAVE，本地存档不是该世界的存档，备份后按新玩家开局");
+            BackupLocalSave(filePath);
+            OS.WillLoadSave = false;
+        }
+
+        bool saveExists = !discardLocalSave
+            && !string.IsNullOrEmpty(filePath)
             && SaveFileHelper.SaveExists(filePath);
 
         if (saveExists)
@@ -380,6 +394,39 @@ public static class GameLauncher
     }
 
     /// <summary>从扩展名配置推断扩展目录</summary>
+    /// <summary>
+    /// 把 HHBS 目录和根账户目录里的本地存档改名为 *.stale-时间戳.bak（不删除，可手动找回）。
+    /// 这两个位置与上面写入服务端存档的位置一致。
+    /// </summary>
+    private static void BackupLocalSave(string filePath)
+    {
+        try
+        {
+            string? hhbs = null;
+            try { hhbs = Hacknet.HostileHackerBreakinSequence.GetBaseDirectory(); } catch { }
+            if (string.IsNullOrEmpty(hhbs)) return;
+
+            string fileName = System.IO.Path.GetFileName(filePath);
+            string? rootDir = System.IO.Path.GetDirectoryName(hhbs.TrimEnd('\\', '/'));
+            string stamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+
+            foreach (var dir in new[] { hhbs, rootDir })
+            {
+                if (string.IsNullOrEmpty(dir)) continue;
+                string src = System.IO.Path.Combine(dir, fileName);
+                if (!System.IO.File.Exists(src)) continue;
+
+                string dst = src + ".stale-" + stamp + ".bak";
+                System.IO.File.Move(src, dst);
+                Console.WriteLine($"[GameLauncher] 已备份本地存档: {dst}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GameLauncher] 备份本地存档失败: {ex.Message}");
+        }
+    }
+
     private static string GetExtensionName(AvailableServer server)
     {
         // 1. 优先使用 INI 中配置的 ExtensionName

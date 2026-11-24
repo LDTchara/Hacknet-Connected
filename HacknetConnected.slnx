@@ -1,6 +1,11 @@
 <Solution>
   <Project Path="ClientPlugin/ClientPlugin.csproj" />
+  <Project Path="HNC.Sync.Abstractions/HNC.Sync.Abstractions.csproj" />
+  <Project Path="HNC.Sync.Adapters/HNC.Sync.Adapters.csproj" />
+  <Project Path="HNC.Sync.Core/HNC.Sync.Core.csproj" />
+  <Project Path="HNC.Sync.Tests/HNC.Sync.Tests.csproj" />
   <Project Path="HacknetServerTerminal/HacknetServerTerminal.csproj" />
+  <Project Path="ReplaceAction/ReplaceSystem.csproj" />
   <Project Path="SeedSyncGlobal/SeedSyncGlobal.csproj" />
   <Project Path="ServerClientEventsMod/ServerClientEventsMod.csproj" />
   <Project Path="ServerPlugin/ServerPlugin.csproj" />

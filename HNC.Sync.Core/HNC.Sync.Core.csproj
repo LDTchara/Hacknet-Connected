@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 双端共用核心。刻意不引用 Hacknet / Pathfinder / Harmony：纯反射 + 协议，
+       这样既能被 ClientPlugin/ServerPlugin 使用，也能被 .NET 9 的终端与单元测试使用。 -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>11</LangVersion>
+    <RootNamespace>HNC.Sync</RootNamespace>
+    <OutputPath>..\Output\HNC.Sync\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HNC.Sync.Abstractions\HNC.Sync.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

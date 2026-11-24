@@ -37,6 +37,13 @@ internal static class EventReceiver
     {
         try
         {
+            // HNC.Sync 消息：交给同步引擎，不整条打印（全量快照可能很大）
+            if (msg.StartsWith("SYNC:", StringComparison.Ordinal))
+            {
+                ClientSync.OnMessage(msg);
+                return;
+            }
+
             Console.WriteLine($"[EventRecv] {msg}");
 
             // 非 EVENT 消息（WELCOME / PLAYER_LIST / WORLD_SEED 等）
@@ -107,6 +114,21 @@ internal static class EventReceiver
         {
             var listStr = msg.Substring("PLAYER_LIST:".Length);
             Console.WriteLine($"[EventRecv] Online players: {listStr}");
+            PlayerMail.UpdateOnline(listStr);
+        }
+
+        // ── 玩家间邮件 ──
+        else if (msg.StartsWith("MAIL:"))
+        {
+            PlayerMail.OnReceived(msg);
+        }
+        else if (msg.StartsWith("MAIL_SENT:"))
+        {
+            PlayerMail.OnSent(msg);
+        }
+        else if (msg.StartsWith("MAIL_FAIL:"))
+        {
+            PlayerMail.OnFailed(msg);
         }
 
         // ── 玩家数据同步（来自服务端 HELLO 握手） ──
@@ -128,11 +150,13 @@ internal static class EventReceiver
         else if (msg == "HAS_SAVE")
         {
             ClientPluginMain.HasServerSave = true;
+            ClientPluginMain.ServerReportedNoSave = false;
             Console.WriteLine("[EventRecv] HAS_SAVE: 服务端有该玩家存档，等待传输...");
         }
         else if (msg == "NO_SAVE")
         {
             ClientPluginMain.HasServerSave = false;
+            ClientPluginMain.ServerReportedNoSave = true;
             Console.WriteLine("[EventRecv] NO_SAVE: 新玩家，跳过存档传输");
         }
 

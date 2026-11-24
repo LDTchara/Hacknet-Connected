@@ -87,6 +87,43 @@ internal static class NetworkManager
             SendTo(client.Peer, msg);
     }
 
+    /// <summary>
+    /// HNC.Sync 消息（服务端游戏 → 客户端）按头部路由，不解析载荷：
+    ///   SYNC:{OP}:{scope}:{playerId|*}:{b64 key}:{version}:{b64 payload}
+    /// playerId 为 * → 广播；否则只发给该 PlayerId 的客户端。
+    /// </summary>
+    public static void RouteSync(string msg)
+    {
+        var parts = msg.Split(':', 5);
+        if (parts.Length < 5) return;
+        if (parts[3] == "*")
+            Broadcast(msg);
+        else if (int.TryParse(parts[3], out int pid))
+            SendToPlayer(pid, msg);
+    }
+
+    /// <summary>
+    /// 服务端游戏发来的邮件：MAIL_OUT:{收件人id}:{b64 主题}:{b64 正文}。
+    /// 转给在线的收件人（发件人显示为 "Server"），并回 MAIL_RESULT:{id}:{ok|offline} 给游戏进程。
+    /// </summary>
+    public static void HandleServerMail(string msg)
+    {
+        var p = msg.Split(':', 4);
+        if (p.Length != 4 || !int.TryParse(p[1], out int toId)) return;
+
+        var target = GetAllClients().FirstOrDefault(c => c.PlayerId == toId && c.Peer != null);
+        if (target == null || p[2].Length > 1400 || p[3].Length > 12000)
+        {
+            _ = Program.SendToModFireForget($"MAIL_RESULT:{toId}:offline");
+            return;
+        }
+
+        string from64 = Convert.ToBase64String(Encoding.UTF8.GetBytes("Server"));
+        SendTo(target.Peer!, $"MAIL:0:{from64}:{p[2]}:{p[3]}");
+        _ = Program.SendToModFireForget($"MAIL_RESULT:{toId}:ok");
+        Console.WriteLine($"[邮件] Server → {target.PlayerName}(P{toId})");
+    }
+
     // ── 连接管理 ──
 
     /// <summary>注册客户端身份（由 HELLO 握手触发）</summary>
@@ -122,7 +159,15 @@ internal static class NetworkManager
     {
         var players = GetAllClients();
         var names = string.Join(",", players.Select(c => $"{c.PlayerId}:{c.PlayerName}"));
-        Broadcast($"PLAYER_LIST:{names}");
+
+        // 服务端游戏（主机玩家）也是邮件的收发对象：给客户端的列表里加上 0 号 "Server"
+        string forClients = Program.IsModConnected
+            ? (names.Length > 0 ? "0:Server," + names : "0:Server")
+            : names;
+        Broadcast($"PLAYER_LIST:{forClients}");
+
+        // 服务端游戏的 sendmail list 用（不含它自己）
+        _ = Program.SendToModFireForget($"PLAYERS:{names}");
     }
 
     /// <summary>net_log.txt 写锁（防后台 Pipe 线程和 LiteNetLib 线程并发写）</summary>
@@ -130,6 +175,9 @@ internal static class NetworkManager
 
     internal static void Log(string tag, string msg)
     {
+        // 大消息（存档分块、HNC.Sync 全量快照）只记开头，避免每条都把几十 KB 写进日志
+        if (msg.Length > 300)
+            msg = msg.Substring(0, 300) + $"...(共 {msg.Length} 字符)";
         lock (_netLogLock)
         {
             File.AppendAllText("net_log.txt",
@@ -221,6 +269,9 @@ internal class ServerNetListener : INetEventListener
 
             // 立即发送世界种子
             SendWorldSeedToClient(peer, info);
+
+            // 通知服务端游戏进程：该玩家已连入（HNC.Sync 据此发送全量状态；客户端世界没加载完时会暂存）
+            _ = Program.SendToModFireForget($"SYNC_JOIN:{info.PlayerId}");
 
             NetworkManager.BroadcastPlayerList();
             return;
@@ -366,6 +417,64 @@ internal class ServerNetListener : INetEventListener
         if (msg.StartsWith("PING:"))
         {
             Console.WriteLine("[心跳] " + msg);
+            return;
+        }
+
+        // ── 玩家间邮件：MAIL_SEND:{收件人id}:{b64 主题}:{b64 正文} ──
+        // 只定向转给收件人，并盖上真实发件人（取自已注册的连接身份，客户端无法伪造）。
+        if (msg.StartsWith("MAIL_SEND:"))
+        {
+            var mailSender = NetworkManager.GetClient(peer.Id);
+            var mp = msg.Split(':', 4);
+            if (mailSender == null || mp.Length != 4 || !int.TryParse(mp[1], out int mailToId))
+            {
+                NetworkManager.SendTo(peer, "MAIL_FAIL:0:invalid");
+                return;
+            }
+            if (mp[2].Length > 1400 || mp[3].Length > 12000)
+            {
+                NetworkManager.SendTo(peer, $"MAIL_FAIL:{mailToId}:toolong");
+                return;
+            }
+            if (mailToId == mailSender.PlayerId)
+            {
+                NetworkManager.SendTo(peer, $"MAIL_FAIL:{mailToId}:self");
+                return;
+            }
+            // 收件人 0 = 服务端游戏（主机玩家）：走 Pipe 交给游戏进程，同样由终端盖上真实发件人
+            if (mailToId == 0)
+            {
+                if (!Program.IsModConnected)
+                {
+                    NetworkManager.SendTo(peer, "MAIL_FAIL:0:offline");
+                    return;
+                }
+                string mailFrom64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(mailSender.PlayerName));
+                _ = Program.SendToModFireForget($"MAIL_TO_SERVER:{mailSender.PlayerId}:{mailFrom64}:{mp[2]}:{mp[3]}");
+                NetworkManager.SendTo(peer, "MAIL_SENT:0");
+                Console.WriteLine($"[邮件] {mailSender.PlayerName}(P{mailSender.PlayerId}) → Server");
+                return;
+            }
+
+            var mailTarget = NetworkManager.GetAllClients().FirstOrDefault(c => c.PlayerId == mailToId && c.Peer != null);
+            if (mailTarget == null)
+            {
+                NetworkManager.SendTo(peer, $"MAIL_FAIL:{mailToId}:offline");
+                return;
+            }
+            string senderName64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(mailSender.PlayerName));
+            NetworkManager.SendTo(mailTarget.Peer!, $"MAIL:{mailSender.PlayerId}:{senderName64}:{mp[2]}:{mp[3]}");
+            NetworkManager.SendTo(peer, $"MAIL_SENT:{mailToId}");
+            Console.WriteLine($"[邮件] {mailSender.PlayerName}(P{mailSender.PlayerId}) → {mailTarget.PlayerName}(P{mailToId})");
+            return;
+        }
+
+        // ── HNC.Sync：只转给服务端游戏进程（带发送者 PlayerId），不广播给其他客户端 ──
+        if (msg.StartsWith("SYNC:"))
+        {
+            var syncClient = NetworkManager.GetClient(peer.Id);
+            if (syncClient != null)
+                _ = Program.SendToModFireForget($"SYNC_FROM:{syncClient.PlayerId}:{msg}");
             return;
         }
 

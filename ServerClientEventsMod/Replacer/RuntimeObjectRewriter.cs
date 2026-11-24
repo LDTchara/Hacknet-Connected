@@ -116,6 +116,13 @@ internal static class RuntimeObjectRewriter
             return changed;
         }
 
+        // System.Array 实现了 IList，但多维数组（T[,]）通过 IList 索引器访问会抛
+        // ArgumentException: Array was not a one-dimensional array。
+        // 基元类型数组（int[] 等）不可能含字符串，也没必要逐元素装箱扫描。
+        if (value is Array array &&
+            (array.Rank != 1 || array.GetType().GetElementType()!.IsPrimitive))
+            return false;
+
         if (value is IList list)
         {
             for (int i = 0; i < list.Count; i++)

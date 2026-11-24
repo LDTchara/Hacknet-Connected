@@ -55,7 +55,16 @@ public class ClientPluginMain : HacknetPlugin
     /// <summary>服务端是否有该玩家的存档（HELLO 握手时由 HAS_SAVE/NO_SAVE 设置）</summary>
     public static volatile bool HasServerSave = false;
 
+    /// <summary>服务端在握手时明确回复了 NO_SAVE（区别于"还没收到回复"）</summary>
+    public static volatile bool ServerReportedNoSave = false;
+
     private static Harmony? _harmony;
+
+    // 必须先于任何 HNC.Sync 类型的加载（PatchAll 会枚举程序集里所有类型，其中 ClientSync 引用了 HNC.Sync）
+    static ClientPluginMain()
+    {
+        HncAssemblyResolver.Install(typeof(ClientPluginMain).Assembly);
+    }
 
     public override bool Load()
     {
@@ -64,6 +73,9 @@ public class ClientPluginMain : HacknetPlugin
 
         // 加载配置
         ClientProfileStorage.Load();
+
+        // HNC.Sync：尽早创建引擎，其他 mod 在 PostLoad 里就能看到 HncSync.Runtime
+        ClientSync.Init();
 
         Console.WriteLine($"[ClientPlugin] Loaded. EnvPath={EnvPath}");
         return true;
@@ -79,6 +91,14 @@ public class ClientPluginMain : HacknetPlugin
     {
         // 注册 selectplayer 命令
         SelectPlayerCommand.Register();
+        SendMailCommand.Register();
+
+        // P0-1：此时所有插件已加载，给 PF/第三方程序集里的 Condition 补 scope 门控
+        if (_harmony != null)
+        {
+            ScopeGatePatches.PatchExternalGates(_harmony);
+            ScopeFactionPatches.Apply(_harmony);
+        }
 
         Console.WriteLine("[ClientPlugin.PostLoad] Checking static Random fields...");
         WorldSeedSync.FixAllStaticRandomFields();

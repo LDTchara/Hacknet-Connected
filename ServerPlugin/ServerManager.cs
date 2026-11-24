@@ -112,6 +112,9 @@ internal static class ServerManager
             // 通知所有订阅者 Pipe 已就绪
             OnPipeConnected?.Invoke();
 
+            // HNC.Sync：真正的启动在主线程的 Update 里做
+            ServerSync.RequestStart();
+
             // 启动后台消息监听
             _cts = new CancellationTokenSource();
             _ = Task.Run(() => ListenLoop(_cts.Token));
@@ -203,7 +206,10 @@ internal static class ServerManager
                 var msg = await _pipeReader!.ReadLineAsync();
                 if (msg == null) break; // 管道关闭
 
-                Console.WriteLine($"[ServerPlugin] ← Console: {msg}");
+                if (msg.StartsWith("SYNC:") || msg.StartsWith("SYNC_FROM:") || msg.StartsWith("SYNC_JOIN:"))
+                    Console.WriteLine($"[ServerPlugin] ← Console: {msg.Substring(0, Math.Min(40, msg.Length))}...({msg.Length} 字符)");
+                else
+                    Console.WriteLine($"[ServerPlugin] ← Console: {msg}");
                 LogPipeIn(msg);
                 MessageQueue.Enqueue(msg);
                 lock (_pipeLock) { _pipeWriter!.WriteLine("OK"); }
@@ -241,6 +247,10 @@ internal static class ServerManager
         {
             var msg = MessageQueue.Dequeue();
             if (msg == null) break;
+
+            // HNC.Sync 消息：先于 ':' 拆分处理，也不整条打印
+            if (ServerSync.TryHandlePipeMessage(msg)) continue;
+            if (ServerMail.TryHandlePipeMessage(msg)) continue;
 
             Console.WriteLine($"[ServerPlugin] Process msg: {msg}");
 

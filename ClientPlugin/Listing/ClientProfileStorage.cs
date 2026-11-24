@@ -186,11 +186,12 @@ public static class ClientProfileStorage
 
         foreach (var server in Servers)
         {
+            string extAttr = !string.IsNullOrEmpty(server.ExtensionName) ? $" ExtensionName=\"{server.ExtensionName}\"" : "";
             string ipAttr = !string.IsNullOrEmpty(server.IP) ? $" ip=\"{server.IP}\"" : "";
             string portAttr = server.Port > 0 ? $" Port=\"{server.Port}\"" : "";
             string seedAttr = server.WorldSeed > 0 ? $" WorldSeed=\"{server.WorldSeed}\"" : "";
             string cscAttr = server.ChildSeedCounter > 0 ? $" ChildSeedCounter=\"{server.ChildSeedCounter}\"" : "";
-            sb.AppendLine($"[Client Name=\"{server.HostName}\"{ipAttr}{portAttr}{seedAttr}{cscAttr} Start]");
+            sb.AppendLine($"[Client Name=\"{server.HostName}\"{extAttr}{ipAttr}{portAttr}{seedAttr}{cscAttr} Start]");
 
             if (!string.IsNullOrEmpty(server.FolderPath))
                 sb.AppendLine($"[Folder Path=\"{server.FolderPath}\"]");

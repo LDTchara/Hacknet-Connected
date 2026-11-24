@@ -4,12 +4,12 @@
         <Globle>
             <PlayerReplacementsGroup name="p1">
                 <PTR Org="#PLAYERNAME#" Curr="#P1NAME#" />
-                <PTR Org="#PLAYER_IP#" Curr="#P1_IP" />
-            <PlayerReplacementsGroup>
+                <PTR Org="#PLAYER_IP#" Curr="#P1_IP#" />
+            </PlayerReplacementsGroup>
             <PlayerReplacementsGroup name="p2">
                 <PTR Org="#PLAYERNAME#" Curr="#P2NAME#" />
-                <PTR Org="#PLAYER_IP#" Curr="#P2_IP" />
-            <PlayerReplacementsGroup>
+                <PTR Org="#PLAYER_IP#" Curr="#P2_IP#" />
+            </PlayerReplacementsGroup>
 
 
             <!--
@@ -24,28 +24,28 @@
             
             
             -->
-        <Globle/>
+        </Globle>
         <Private>
             <PlayerReplacementsGroup name="mp1" num="2">
                 <Player name="1">
                     <PTR Org="#PLAYERNAME#" Curr="#M-P1NAME#" />
-                    <PTR Org="#PLAYER_IP#" Curr="#M-P1_IP" />
-                <Player/>
+                    <PTR Org="#PLAYER_IP#" Curr="#M-P1_IP#" />
+                </Player>
                 <Player name="2">
                     <PTR Org="#PLAYERNAME#" Curr="#M-P2NAME#" />
-                    <PTR Org="#PLAYER_IP#" Curr="#M-P2_IP" />
-                <Player/>
-            <PlayerReplacementsGroup>
-        <Private/>
+                    <PTR Org="#PLAYER_IP#" Curr="#M-P2_IP#" />
+                </Player>
+            </PlayerReplacementsGroup>
+        </Private>
         <!--
         private的标签下存储了局部的自替换符。num表示这一个支线任务需要的人数，name是作者自己用来区分填写的。
         然后就是跟上面一样的自替换标签对照组，
         请注意，尽管这是局部的，但是局部的与局部的，局部的与全局的之间均不能重复。
         
         -->
-    <PlayerToReplacements>
+    </PlayerToReplacements>
 
-<PlayersConfig/>
+</PlayersConfig>
 
 <!--
 1.对于服务端：

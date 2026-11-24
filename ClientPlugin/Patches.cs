@@ -46,6 +46,8 @@ internal static class GameUpdatePatch
     public static void Postfix()
     {
         ClientNetworkManager.PollEvents();
+        ClientSync.Update();
+        PlayerMail.Update();
 
         // 心跳：每 2 秒发一次 PING 给服务端，测试是否一直在线
         if (ClientNetworkManager.IsConnected)

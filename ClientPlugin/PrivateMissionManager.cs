@@ -159,9 +159,12 @@ public class PrivateMissionManager
 
         foreach (var ptr in myPtrs)
         {
-            // 将 Curr→Org 添加到 PlayerConfigLoader 的 PTR 映射
-            // 这样 ComputerLoader.filter 中 #M-P1NAME# → #PLAYERNAME# → os.defaultUser.name
-            // 而 #PLAYERNAME# 和 #PLAYER_IP# 是原版 filter 已经支持的
+            // 将 Curr→Org 注入 PlayerConfigLoader.CurrToOrgMappings，
+            // PlayerPtrFilterPatch 会在 ComputerLoader.filter 之前做字符串替换：
+            // #M-P1NAME# → #PLAYERNAME#，#M-P1_IP# → #PLAYER_IP#，
+            // 再由原版 filter 解析为当前玩家的名字 / IP。
+            if (string.IsNullOrEmpty(ptr.Curr) || string.IsNullOrEmpty(ptr.Org)) continue;
+            PlayerConfigLoader.CurrToOrgMappings[ptr.Curr] = ptr.Org;
         }
 
         // 广播选择结果给其他客户端

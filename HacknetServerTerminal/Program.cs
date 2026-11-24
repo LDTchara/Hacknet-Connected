@@ -371,6 +371,25 @@ internal class Program
                     continue;
                 }
 
+                // ── 服务端游戏发给客户端的邮件 ──
+                if (msg.StartsWith("MAIL_OUT:"))
+                {
+                    try { NetworkManager.HandleServerMail(msg); }
+                    catch (Exception mailEx) { Console.WriteLine($"[Pipe] 邮件转发失败（非致命）: {mailEx.Message}"); }
+                    continue;
+                }
+
+                // ── HNC.Sync：按头部路由给客户端（载荷可能很大，不打印） ──
+                if (msg.StartsWith("SYNC:"))
+                {
+                    try { NetworkManager.RouteSync(msg); }
+                    catch (Exception syncEx)
+                    {
+                        Console.WriteLine($"[Pipe] SYNC 路由失败（非致命）: {syncEx.Message}");
+                    }
+                    continue;
+                }
+
                 Console.WriteLine("[Pipe] " + msg);
 
                 // 广播 EVENT: / WORLD_SEED: / SAVE_LIST: 消息给客户端

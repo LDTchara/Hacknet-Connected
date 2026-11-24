@@ -27,6 +27,12 @@ public class ServerPlugin : HacknetPlugin
 
     private static Harmony? _harmony;
 
+    // 必须先于任何 HNC.Sync 类型的加载（PatchAll 会枚举程序集里所有类型，其中 ServerSync 引用了 HNC.Sync）
+    static ServerPlugin()
+    {
+        HncAssemblyResolver.Install(typeof(ServerPlugin).Assembly);
+    }
+
     public override bool Load()
     {
         _harmony = new Harmony(ModGUID);
@@ -41,6 +47,8 @@ public class ServerPlugin : HacknetPlugin
     /// </summary>
     public override void PostLoad()
     {
+        ServerMail.RegisterCommand();
+
         Console.WriteLine("[ServerPlugin.PostLoad] Scanning for static Random fields...");
 
         // FixAllStaticRandomFields 已经内部处理未初始化的 pending 标记，
@@ -258,6 +266,7 @@ internal static class ResetServerStatePatch
     {
         ServerManager.Reset();
         WorldSeedSync.Reset();
+        ServerSync.Stop();
     }
 }
 
@@ -284,6 +293,8 @@ internal static class GameUpdatePatch
         }
 
         ServerManager.ProcessPendingMessages();
+        ServerSync.Update();
+        ServerMail.Update();
 
         // ── 种子已生成且 Pipe 已连接，发送种子（含随机状态+计数器+IP计数器） ──
         if (WorldSeedSync.IsInitialized && !WorldSeedSync.SeedSent && ServerManager.IsConnected)

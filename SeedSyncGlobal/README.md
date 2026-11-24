@@ -1,118 +1,47 @@
-# SeedSyncGlobal - 全局种子同步插件
+# SeedSyncGlobal - 全局固定种子插件（v2.1.0）
 
-## 📝 说明
+全局 BepInEx 插件：在游戏启动时就把 `Utils.random` 重置为确定性种子，让多个 Hacknet 实例生成相同的世界。
 
-这是一个全局 BepInEx 插件，用于在游戏启动时就初始化 `Utils.random` 为确定性种子。
+## 为什么必须是全局插件
 
-## 🎯 为什么需要全局插件？
+`Utils.random` 是 static 字段，在 `Utils` 类加载时就被初始化。作为扩展加载的 ClientPlugin / ServerPlugin 生效太晚，拦截不到这次初始化。全局插件早于任何游戏代码加载。
 
-`Utils.random` 是一个 static 字段，在 `Utils` 类加载时就被初始化了。如果 ClientPlugin/ServerPlugin 作为扩展加载，它们在 `Utils` 类已经初始化后才生效，无法拦截 `Utils.random` 的创建。
+## 种子从哪来
 
-全局插件在游戏启动时就加载，早于任何游戏代码，可以成功拦截 `Utils.random`。
+1. 启动时扫描**桌面**（`Environment.SpecialFolder.Desktop`）下的 `*.seed` 文件，取第一个。
+2. **文件名（不含扩展名）就是种子**，必须是整数。例如 `42.seed` → 种子 42。
+3. 没找到文件、文件名不是整数或读取失败时，使用默认种子 `114514`，并在日志里打印 `ERROR` / `Using default seed`。
 
-## 🔄 全局/局部切换逻辑
+> 注意：此版本**不再**使用旧版的"临时种子 0 + 进入扩展后自动 Unload"逻辑。
+> 全局模式没有自动卸载；真实世界种子由服务端通过 ClientPlugin / ServerPlugin 的 WorldSeedSync 另行同步。
 
-### 全局模式（默认）
-- 安装在 `Hacknet/BepInEx/plugins/SeedSyncGlobal.dll`
-- 只初始化 `Utils.random` 种子（临时种子 0）
-- 不启用其他功能（UI、网络等）
-- 等待扩展内的 ClientPlugin/ServerPlugin 接管
+## 它做了什么
 
-### 局部模式（自动切换）
-- 当进入包含 ClientPlugin/ServerPlugin 的扩展时
-- 全局插件检测到局部插件
-- 自动 Unload 自己
-- 局部插件接管所有功能
+- `Load()`：读取 `.seed` → `PatchAll()` → 对 `Utils.random` 做 `ForceReSeed(FixedSeed)`（反射写 `SeedArray` / `inext` / `inextp`）。
+- 维护 `GlobalIpCounter`，用于对齐 `NetworkMap.generateRandomIP()`：两端同种子 + 同计数器 → 同 IP。
+- `Unload()`：撤销自己的 Harmony 补丁。
 
-## 📦 安装
+## 安装
 
-### 编译
 ```bash
 cd SeedSyncGlobal
 dotnet build
 ```
 
-### 部署
-将编译后的 `SeedSyncGlobal.dll` 复制到：
-```
-Hacknet/BepInEx/plugins/SeedSyncGlobal.dll
-```
+把 `SeedSyncGlobal.dll` 复制到 `Hacknet/BepInEx/plugins/`。**不要**放进扩展目录。
 
-**不要**将其放在扩展目录中！
+## 验证
 
-## ✅ 验证
+日志应出现（路径与种子视实际情况而定）：
 
-启动游戏后，日志应该显示：
 ```
-[SeedSyncGlobal] ═══════════════════════════════════════════
-[SeedSyncGlobal] Loading in GLOBAL mode
-[SeedSyncGlobal] ═══════════════════════════════════════════
-[SeedSyncGlobal] Patched Utils.random initialization
-[SeedSyncGlobal] ═══════════════════════════════════════════
-[SeedSyncGlobal] Utils.random re-seeded with temporary seed: 0
-[SeedSyncGlobal] Ensures deterministic behavior until real seed arrives
-[SeedSyncGlobal] ═══════════════════════════════════════════
+[SeedSyncGlobal] ✓ Loaded seed from: 42.seed -> 42
+[SeedSyncGlobal] Loaded - Fixed Seed = 42
 ```
 
-进入扩展后，应该显示：
-```
-[SeedSyncGlobal] ═══════════════════════════════════════════
-[SeedSyncGlobal] Detected local ClientPlugin/ServerPlugin
-[SeedSyncGlobal] Switching to local mode, unloading global plugin
-[SeedSyncGlobal] ═══════════════════════════════════════════
-```
+如果出现 `No .seed file found on Desktop`，说明桌面没有 `.seed` 文件，正在使用默认种子。
 
-## 🔧 工作原理
+## 注意
 
-1. **游戏启动** → BepInEx 加载 SeedSyncGlobal
-2. **检查安装位置** → 确认是全局安装
-3. **Patch Utils 静态构造函数** → 等待 Utils 类加载
-4. **Utils 类加载** → Utils.random = new Random()
-5. **Patch 立即执行** → Utils.random.ReSeed(0)
-6. **进入扩展** → ExtensionLoader.LoadExtension()
-7. **检测局部插件** → 发现 ClientPlugin/ServerPlugin
-8. **Unload 全局插件** → 局部插件接管
-
-## 🎮 与 ClientPlugin/ServerPlugin 的关系
-
-| 功能 | SeedSyncGlobal | ClientPlugin/ServerPlugin |
-|------|----------------|---------------------------|
-| Utils.random 初始化 | ✅ (临时种子 0) | ✅ (真正种子) |
-| 网络通信 | ❌ | ✅ |
-| UI 界面 | ❌ | ✅ |
-| 种子同步 | ❌ | ✅ |
-| 配置管理 | ❌ | ✅ |
-
-SeedSyncGlobal 只负责最早期的 `Utils.random` 初始化，其他所有功能由 ClientPlugin/ServerPlugin 处理。
-
-## 📋 依赖
-
-- BepInEx.Core
-- BepInEx.Hacknet
-- HacknetPathfinder
-- 0Harmony
-- RandomSeedHelper.cs（来自 ClientPlugin）
-
-## ⚠️ 注意事项
-
-1. **必须全局安装**：不要放在扩展目录中
-2. **与局部插件协同**：需要同时安装 ClientPlugin/ServerPlugin
-3. **版本兼容**：确保与 ClientPlugin/ServerPlugin 版本一致
-
-## 🐛 故障排查
-
-### 问题：没有看到 `[SeedSyncGlobal]` 日志
-**原因**：插件没有被加载
-**解决**：
-- 检查 DLL 是否在 `Hacknet/BepInEx/plugins/` 目录
-- 检查 BepInEx 日志中是否有加载错误
-
-### 问题：显示 "Loading in LOCAL mode"
-**原因**：插件被放在了扩展目录中
-**解决**：移动到全局 plugins 目录
-
-### 问题：进入扩展后没有 Unload
-**原因**：没有检测到局部 ClientPlugin/ServerPlugin
-**解决**：
-- 确认扩展中有 ClientPlugin.dll 或 ServerPlugin.dll
-- 检查 GUID 是否匹配（`com.ClientPlugin.AP` 或 `com.ServerPlugin.Tesr`）
+- 同一个多人局里，所有客户端和服务端的桌面 `.seed` 文件名必须一致，否则世界不同。
+- 桌面上有多个 `.seed` 文件时只取 `Directory.GetFiles` 返回的第一个，顺序不保证，请只保留一个。

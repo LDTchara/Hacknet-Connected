@@ -72,7 +72,7 @@ public class PlayerData
 
 /// <summary>
 /// 服务端专用：多玩家集合包装器。
-/// 存储在 Storage/Players.xml。
+/// 按服务器分文件存储在 Storage/Players/{serverName}.xml。
 /// </summary>
 [XmlRoot("PlayerDataList")]
 public class PlayerDataList

@@ -4,16 +4,16 @@
         <Globle>
             <PlayerReplacementsGroup name="p1" playerid="1">
                 <PTR Org="#PLAYERNAME#" Curr="#P1NAME#" />
-                <PTR Org="#PLAYER_IP#" Curr="#P1_IP" />
-            <PlayerReplacementsGroup>
+                <PTR Org="#PLAYER_IP#" Curr="#P1_IP#" />
+            </PlayerReplacementsGroup>
             <PlayerReplacementsGroup name="p2" playerid="2">
                 <PTR Org="#PLAYERNAME#" Curr="#P2NAME#" />
-                <PTR Org="#PLAYER_IP#" Curr="#P2_IP" />
-            <PlayerReplacementsGroup>
+                <PTR Org="#PLAYER_IP#" Curr="#P2_IP#" />
+            </PlayerReplacementsGroup>
             <PlayerReplacementsGroup name="p3" playerid="3">
                 <PTR Org="#PLAYERNAME#" Curr="#P3NAME#" />
-                <PTR Org="#PLAYER_IP#" Curr="#P3_IP" />
-            <PlayerReplacementsGroup>
+                <PTR Org="#PLAYER_IP#" Curr="#P3_IP#" />
+            </PlayerReplacementsGroup>
 
             <!--
             Globle中存储了3个玩家对应各自替换符的含义。作者直接写#P1NAME#
@@ -28,19 +28,19 @@
             PS:这里的playerid指的就是服务端存储的用于区分玩家的每个服务器分配玩家的playerid
 
             -->
-        <Globle/>
+        </Globle>
         <Private>
             <PlayerReplacementsGroup name="mission1-private" num="2">
                 <Player name="1" playerid="">
                     <PTR Org="#PLAYERNAME#" Curr="#M-P1NAME#" />
-                    <PTR Org="#PLAYER_IP#" Curr="#M-P1_IP" />
-                <Player/>
+                    <PTR Org="#PLAYER_IP#" Curr="#M-P1_IP#" />
+                </Player>
                 <Player name="2" playerid="">
                     <PTR Org="#PLAYERNAME#" Curr="#M-P2NAME#" />
-                    <PTR Org="#PLAYER_IP#" Curr="#M-P2_IP" />
-                <Player/>
-            <PlayerReplacementsGroup>
-        <Private/>
+                    <PTR Org="#PLAYER_IP#" Curr="#M-P2_IP#" />
+                </Player>
+            </PlayerReplacementsGroup>
+        </Private>
         <!--
         private的标签下存储了局部的自替换符。num表示这一个支线任务需要的人数，name是作者自己用来区分填写的。
         然后就是跟上面一样的自替换标签对照组，
@@ -48,6 +48,6 @@
         
         ps:对于private，由于支线任务不一定做了，所以我们允许playerid暂时为空。
         -->
-    <PlayerToReplacements>
+    </PlayerToReplacements>
 
-<PlayersConfig/>
+</PlayersConfig>

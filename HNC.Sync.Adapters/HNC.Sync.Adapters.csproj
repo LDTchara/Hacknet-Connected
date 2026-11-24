@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 内置适配器：把原版 Daemon（以及任何"状态存在电脑文件夹里"的 Daemon）接入 HNC.Sync。
+       这是唯一同时依赖 Hacknet 和 HNC.Sync.Core 的项目；Core 本身不依赖游戏。
+       游戏库直接引用 ClientPlugin/libs，避免再复制一份二进制。 -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>11</LangVersion>
+    <RootNamespace>HNC.Sync.Adapters</RootNamespace>
+    <OutputPath>..\Output\HNC.Sync.Adapters\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HNC.Sync.Abstractions\HNC.Sync.Abstractions.csproj" />
+    <ProjectReference Include="..\HNC.Sync.Core\HNC.Sync.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Hacknet">
+      <HintPath>..\ClientPlugin\libs\HacknetPathfinder.exe</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="FNA">
+      <HintPath>..\ClientPlugin\libs\FNA.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

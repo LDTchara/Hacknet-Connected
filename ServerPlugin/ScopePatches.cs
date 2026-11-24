@@ -161,6 +161,30 @@ public static class ScopePatches
         }
     }
 
+    /// <summary>原版 Condition 存档写回 players/group（P0-3）</summary>
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(SerializableCondition), nameof(SerializableCondition.GetSaveString))]
+    public static void ConditionGetSaveStringPostfix(SerializableCondition __instance, ref string __result)
+    {
+        var scope = ScopeManager.GetScope(__instance);
+        if (scope == null || scope.IsPublic || __result == null) return;
+        int insertPos = __result.IndexOf(' ') + 1;
+        if (insertPos > 0)
+            __result = __result.Insert(insertPos,
+                $"players=\"{scope.Players}\" group=\"{scope.Group}\" ");
+    }
+
+    /// <summary>PF Condition 存档写回 players/group（P0-2）</summary>
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(PathfinderCondition), nameof(PathfinderCondition.GetSaveElement))]
+    public static void ConditionGetSaveElementPostfix(PathfinderCondition __instance, ref XElement __result)
+    {
+        var scope = ScopeManager.GetScope(__instance);
+        if (scope == null || scope.IsPublic || __result == null) return;
+        __result.SetAttributeValue("players", scope.Players);
+        __result.SetAttributeValue("group", scope.Group);
+    }
+
     /// <summary>
     /// PF PathfinderAction.GetSaveElement — 在 XElement 中添加属性
     /// </summary>
@@ -176,38 +200,12 @@ public static class ScopePatches
     }
 
     // ═════════════════════════════════════════════════════════════
-    // ③ 调用点门控：关键执行循环
+    // ③ 调用点门控
     // ═════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// RunnableConditionalActions.Update — 主循环。
-    /// 条件检查和动作触发都走这里。
-    /// </summary>
-    /// <remarks>
-    /// ⚠ 占位实现：绝不能在这里调用 __instance.Update(dt, os) 来"执行原逻辑"——
-    /// 该方法已被 Harmony detour，调用会再次进入本 prefix，无限递归直到
-    /// StackOverflowException（进程直接崩溃，无法捕获）。
-    /// </remarks>
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(RunnableConditionalActions), nameof(RunnableConditionalActions.Update))]
-    public static bool ConditionalActionsUpdatePrefix(RunnableConditionalActions __instance,
-                                                       float dt, object os)
-    {
-        // 占位：暂不拦截，放行原方法（后续用 scope 感知版本替换时，
-        // 原逻辑需要通过 Harmony ReversePatch 或 Postfix 方式执行）
-        return true;
-    }
-
-    /// <summary>
-    /// ActiveMission.finish — 任务完成时，endFunction 和 nextMission 需要 scope 门控
-    /// </summary>
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(ActiveMission), "finish")]
-    public static bool MissionFinishPrefix(ActiveMission __instance)
-    {
-        // 后续实现：检查 __instance 的 endFunction / nextMission 的 scope
-        return true; // 暂放行
-    }
+    // 已移除两个 "return true" 占位补丁（P1-5 / P1-6）：
+    //  - RunnableConditionalActions.Update：其内部调用的 Condition.Check 与
+    //    Action.Trigger 已被 ScopeGatePatches 门控，无需再拦截整个循环。
+    //  - ActiveMission.finish：真实实现在 ScopeMissionPatches（missionEnd / nextMission）。
 
     // ═════════════════════════════════════════════════════════════
     // 工具方法

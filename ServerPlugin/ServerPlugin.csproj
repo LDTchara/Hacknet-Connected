@@ -62,4 +62,13 @@
 	  </ProjectReference>
   </ItemGroup>
 
+
+  <!-- HNC.Sync：不嵌入 Costura，保持为插件目录里的独立 dll——
+       这样本插件和第三方 mod 引用的 HNC.Sync.Abstractions 是同一个程序集实例（HncSync.Runtime 是静态的）。 -->
+  <ItemGroup>
+    <ProjectReference Include="..\HNC.Sync.Abstractions\HNC.Sync.Abstractions.csproj" />
+    <ProjectReference Include="..\HNC.Sync.Core\HNC.Sync.Core.csproj" />
+    <ProjectReference Include="..\HNC.Sync.Adapters\HNC.Sync.Adapters.csproj" />
+  </ItemGroup>
+
 </Project>

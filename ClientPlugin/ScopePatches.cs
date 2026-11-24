@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
@@ -132,12 +133,35 @@ public static class ScopePatches
             __result = __result.Insert(pos, $"players=\"{scope.Players}\" group=\"{scope.Group}\" ");
     }
 
+    /// <summary>原版 Condition 存档写回 players/group（P0-3）</summary>
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(SerializableCondition), nameof(SerializableCondition.GetSaveString))]
+    public static void ConditionGetSaveStringPostfix(SerializableCondition __instance, ref string __result)
+    {
+        var scope = ScopeManager.GetScope(__instance);
+        if (scope == null || scope.IsPublic || __result == null) return;
+        int pos = __result.IndexOf(' ') + 1;
+        if (pos > 0)
+            __result = __result.Insert(pos, $"players=\"{scope.Players}\" group=\"{scope.Group}\" ");
+    }
+
     [HarmonyPostfix]
     [HarmonyPatch(typeof(PathfinderAction), nameof(PathfinderAction.GetSaveElement))]
     public static void GetSaveElementPostfix(PathfinderAction __instance, ref XElement __result)
     {
         var scope = ScopeManager.GetScope(__instance);
         if (scope == null || scope.IsPublic) return;
+        __result.SetAttributeValue("players", scope.Players);
+        __result.SetAttributeValue("group", scope.Group);
+    }
+
+    /// <summary>PF Condition 存档写回 players/group（P0-2）</summary>
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(PathfinderCondition), nameof(PathfinderCondition.GetSaveElement))]
+    public static void ConditionGetSaveElementPostfix(PathfinderCondition __instance, ref XElement __result)
+    {
+        var scope = ScopeManager.GetScope(__instance);
+        if (scope == null || scope.IsPublic || __result == null) return;
         __result.SetAttributeValue("players", scope.Players);
         __result.SetAttributeValue("group", scope.Group);
     }
@@ -219,6 +243,63 @@ internal static class ScopeGatePatches
         }
     }
 
+    /// <summary>
+    /// P0-1 / P1-7：对 Hacknet.dll 之外的程序集（PathfinderAPI、第三方扩展）里
+    /// 声明了 Check(object) 的 SerializableCondition 子类、
+    /// 声明了 isComplete(List&lt;string&gt;) 的 MisisonGoal 子类补门控。
+    /// TargetMethods() 在 PatchAll 时就已求值，那时其它插件可能还没加载，
+    /// 所以这里必须在 PostLoad（所有插件 Load 完毕）之后手动补丁。
+    /// 本方法没有 Harmony 注解，不会和 TargetMethods 约定冲突。
+    /// </summary>
+    internal static int PatchExternalGates(Harmony harmony)
+    {
+        var prefix = new HarmonyMethod(typeof(ScopeGatePatches).GetMethod(
+            nameof(ScopeGatePrefix), BindingFlags.Public | BindingFlags.Static));
+        int conds = PatchExternal(harmony, prefix, typeof(SerializableCondition),
+            nameof(SerializableCondition.Check), typeof(object));
+        int goals = PatchExternal(harmony, prefix, typeof(MisisonGoal),
+            "isComplete", typeof(List<string>));
+        Console.WriteLine($"[ScopeGate] 外部门控：Condition.Check x{conds}, Goal.isComplete x{goals}");
+        return conds + goals;
+    }
+
+    private static int PatchExternal(Harmony harmony, HarmonyMethod prefix,
+        Type baseType, string methodName, Type argType)
+    {
+        var hacknetAsm = baseType.Assembly;
+        int count = 0;
+        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            if (asm == hacknetAsm || asm.IsDynamic) continue;
+
+            Type[] types;
+            try { types = asm.GetTypes(); }
+            catch (ReflectionTypeLoadException e) { types = e.Types.Where(t => t != null).ToArray(); }
+            catch { continue; }
+
+            foreach (var t in types)
+            {
+                if (!t.IsSubclassOf(baseType)) continue;
+                var m = AccessTools.Method(t, methodName, new[] { argType });
+                // 只补"在 t 上声明且有方法体"的实现；抽象中间类上的实现也要补
+                if (m == null || m.DeclaringType != t || m.IsAbstract) continue;
+                try
+                {
+                    harmony.Patch(m, prefix: prefix);
+                    count++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ScopeGate] 补丁失败 {t.FullName}.{methodName}: {ex.Message}");
+                }
+            }
+        }
+        return count;
+    }
+
+    // 同一 (类型, players, group, 结果) 只打一次日志，避免 Condition 每帧 Check 刷屏
+    private static readonly HashSet<string> _logged = new();
+
     [HarmonyPrefix]
     public static bool ScopeGatePrefix(object __instance)
     {
@@ -226,23 +307,29 @@ internal static class ScopeGatePatches
         if (scope == null || scope.IsPublic)
             return true; // 默认全局 → 放行
 
-        // 私有 scope → 检查当前客户端是否匹配
+        bool allow = Evaluate(scope);
+
+        string key = $"{__instance.GetType().Name}|{scope.Players}|{scope.Group}|{allow}";
+        if (_logged.Add(key))
+            Console.WriteLine($"[ScopeGate] {__instance.GetType().Name} players=\"{scope.Players}\" group=\"{scope.Group}\" " +
+                              $"我={ClientPluginMain.SelectPlayerConfig ?? "(空)"} → {(allow ? "放行" : "拦截")}");
+        return allow;
+    }
+
+    private static bool Evaluate(ScopeInfo scope)
+    {
         // 当前客户的 Globle 身份
         string myGloble = ClientPluginMain.SelectPlayerConfig ?? "";
 
         if (string.IsNullOrEmpty(scope.Group))
         {
             // 无 group → 用 Globle 身份匹配 (players="p1")
-            return string.Equals(scope.Players, myGloble,
-                StringComparison.OrdinalIgnoreCase);
+            return string.Equals(scope.Players, myGloble, StringComparison.OrdinalIgnoreCase);
         }
 
         // 有 group → 检查私有身份映射 (group="m1" players="1")
         if (ScopePatches.MyPrivateIdentities.TryGetValue(scope.Group, out var myName))
-        {
-            return string.Equals(scope.Players, myName,
-                StringComparison.OrdinalIgnoreCase);
-        }
+            return string.Equals(scope.Players, myName, StringComparison.OrdinalIgnoreCase);
 
         return false; // 不匹配 → 跳过
     }
