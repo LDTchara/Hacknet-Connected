@@ -51,7 +51,7 @@
 
   <!-- 引用 RandomSeedHelper -->
   <ItemGroup>
-    <Compile Include="..\ClientPlugin\RandomSeedHelper.cs" Link="RandomSeedHelper.cs" />
+    <Compile Include="..\ClientPlugin\Seed\RandomSeedHelper.cs" Link="RandomSeedHelper.cs" />
   </ItemGroup>
 
 </Project>

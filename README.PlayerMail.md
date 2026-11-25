@@ -27,7 +27,7 @@ sendmail <玩家名|编号> <主题> <正文...>   给在线玩家发邮件
 在线列表：终端在玩家变化时给服务端推 PLAYERS:{id}:{name},…（不含它自己）
 ```
 
-文件：`ServerPlugin/ServerMail.cs`、`HacknetServerTerminal/NetworkManager.cs`（`HandleServerMail`、`MAIL_SEND` 的 0 号分支、`BroadcastPlayerList`）。
+文件：`ServerPlugin/Mail/ServerMail.cs`、`HacknetServerTerminal/Network/NetworkManager.cs`（`HandleServerMail`、`MAIL_SEND` 的 0 号分支、`BroadcastPlayerList`）。
 服务端发信时发件人名固定为 `Server`；服务端收到的邮件投递到它自己的 jmail（账户 = 服务端的 `os.defaultUser.name`）。
 
 ## 实现
@@ -44,7 +44,7 @@ sendmail <玩家名|编号> <主题> <正文...>   给在线玩家发邮件
 - 收件人的游戏还没加载好 / 账户还没建好时，邮件留在客户端队列里，最多等 120 秒再丢弃。
 - 邮件存进收件人自己存档里的 jmail，随存档保存。
 
-文件：`ClientPlugin/PlayerMail.cs`（命令 + 收发 + 投递）、`ClientPlugin/EventReceiver.cs`（消息分发、在线列表）、`HacknetServerTerminal/NetworkManager.cs`（`MAIL_SEND` 转发）。
+文件：`ClientPlugin/Mail/PlayerMail.cs`（命令 + 收发 + 投递）、`ClientPlugin/Network/EventReceiver.cs`（消息分发、在线列表）、`HacknetServerTerminal/Network/NetworkManager.cs`（`MAIL_SEND` 转发）。
 
 ## 限制
 

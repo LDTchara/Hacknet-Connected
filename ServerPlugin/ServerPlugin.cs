@@ -270,6 +270,9 @@ internal static class ResetServerStatePatch
         ServerManager.Reset();
         WorldSeedSync.Reset();
         ServerSync.Stop();
+        ServerLobby.Reset();
+        ServerPause.Reset();
+        ServerPhases.Reset();
     }
 }
 
@@ -295,7 +298,11 @@ internal static class GameUpdatePatch
             }
         }
 
+        // 注意：全员暂停时原版 Game1.Update 被跳过，但这个后置补丁照常执行（网络、管道、快捷键都靠它）
         ServerManager.ProcessPendingMessages();
+        ServerLobby.Update();
+        ServerPause.Update();
+        ServerPhases.Update();
         ServerSync.Update();
         ServerMail.Update();
 

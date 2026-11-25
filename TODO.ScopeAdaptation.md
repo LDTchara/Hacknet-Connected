@@ -18,7 +18,7 @@
 - `DelayablePathfinderAction.Trigger(object)`（`sealed override`，PF delayable action 的共用入口）
 - 原版 15 个 `MisisonGoal` 子类的 `isComplete(List<string>)`
 
-Mission 层（客户端 `ClientPlugin/ScopeMissionPatches.cs`）：根元素、`missionStart`/`missionEnd`/`nextMission`、`sendEmail`、`ComputerLoader.loadMission`。
+Mission 层（客户端 `ClientPlugin/Scope/ScopeMissionPatches.cs`）：根元素、`missionStart`/`missionEnd`/`nextMission`、`sendEmail`、`ComputerLoader.loadMission`。
 
 反序列化侧：原版 Action/Condition + PF `ReadAction`/`ReadCondition`/`LoadGoal`。
 
@@ -62,7 +62,7 @@ Mission 层（客户端 `ClientPlugin/ScopeMissionPatches.cs`）：根元素、`
 
 ### [~] 4. Faction Action 无门控（代码已写，未编译）
 
-> **笔记**：新增 `ClientPlugin/ScopeFactionPatches.cs`，PostLoad 里手动补丁 internal 类 `CustomFactionAction` 的 Deserialize（先幂等定位到 `<Action>` 再读 players/group）、Trigger（复用 ScopeGatePrefix）、GetSaveString。下面三个附带问题（一次性消费、只能正向 Flag、rank 共享）未处理。
+> **笔记**：新增 `ClientPlugin/Scope/ScopeFactionPatches.cs`，PostLoad 里手动补丁 internal 类 `CustomFactionAction` 的 Deserialize（先幂等定位到 `<Action>` 再读 players/group）、Trigger（复用 ScopeGatePrefix）、GetSaveString。下面三个附带问题（一次性消费、只能正向 Flag、rank 共享）未处理。
 
 - **问题**：`CustomFactionAction` 是 **`internal class`，不是 `SerializableAction` 子类**（`Hacknet.Factions/CustomFactionAction.cs`），触发路径是 `CustomFaction.CheckForAllCustomActionsToRun()` → `customFactionAction.Trigger(oS)`（`Hacknet.Factions/CustomFaction.cs:27-53`）。HNC 侧无任何 patch 触及。
 - **影响**：`<Action ValueRequired="10">` 整组无法用 `players`/`group` 限定。组内单个 action（如 `<AddIRCMessage players="1"/>`）仍可用，因为 `CustomFactionAction.Deserialize` 内部走 `SerializableAction.Deserialize`。
@@ -75,17 +75,17 @@ Mission 层（客户端 `ClientPlugin/ScopeMissionPatches.cs`）：根元素、`
 
 ### [x] 5. 服务端 mission 门控是空壳（结论：原判断有误，已清理）
 
-> **笔记**：`ServerPlugin/ScopeMissionPatches.cs:247` 已对 `ActiveMission.finish` 做 missionEnd/nextMission 门控；`ScopePatches.cs` 里的是重复占位，已删除。
+> **笔记**：`ServerPlugin/Scope/ScopeMissionPatches.cs:247` 已对 `ActiveMission.finish` 做 missionEnd/nextMission 门控；`ScopePatches.cs` 里的是重复占位，已删除。
 
-- **问题**：`ServerPlugin/ScopePatches.cs:205-209` 的 `MissionFinishPrefix` 内容为 `return true; // 暂放行`，注释写"后续实现"。
-- **对照**：客户端 `ClientPlugin/ScopeMissionPatches.cs` 已完整实现 `missionEnd`/`nextMission`。
+- **问题**：`ServerPlugin/Scope/ScopePatches.cs:205-209` 的 `MissionFinishPrefix` 内容为 `return true; // 暂放行`，注释写"后续实现"。
+- **对照**：客户端 `ClientPlugin/Scope/ScopeMissionPatches.cs` 已完整实现 `missionEnd`/`nextMission`。
 - **建议**：把客户端的实现移植到服务端侧，或明确确认服务端只做中继、无需门控并删除空壳。
 
 ### [x] 6. 客户端缺 `RunnableConditionalActions` 门控（结论：无需补）
 
 > **笔记**：`Update` 内部调用的 `Condition.Check` / `Action.Trigger` 均已被门控；不匹配的 Condition 返回 false，该集合在本客户端永不触发。服务端同名空壳补丁已删除。
 
-- **问题**：服务端 patch 了 `RunnableConditionalActions.Update`（`ServerPlugin/ScopePatches.cs:192`），客户端没有。
+- **问题**：服务端 patch 了 `RunnableConditionalActions.Update`（`ServerPlugin/Scope/ScopePatches.cs:192`），客户端没有。
 - **建议**：确认 DLC ConditionalAction 执行循环是否需要客户端侧拦截；若需要则补齐，若不需要则同步注释说明。
 
 ### [~] 7. PF Goal 无门控（代码已写，未编译）
@@ -151,11 +151,11 @@ Mission 层（客户端 `ClientPlugin/ScopeMissionPatches.cs`）：根元素、`
 - [ ] **`{ServerName}_Profile.xml` 形同虚设**：`ServerProfile.GetStoragePath` 无调用点，样例为空文件；要么实现要么移除约定。
 - [ ] **`Port` 类型不一致**：`Storages.ini` 的 `ServerProfile.Port` 是 `string`，`ClientProfiles.ini` 的 `AvailableServer.Port` 是 `int`。
 - [x] **`HacknetServerTerminal/Example/Storages.ini` 样例过期**（已删除两行过期配置）：含程序不再写出的 `ServerProfilesPath`/`ServerSavesPath` 行。
-- [x] **`HacknetServerTerminal/PlayerData.cs:75` 过时注释**（已改为 `Storage/Players/{serverName}.xml`）：写"存储在 `Storage/Players.xml`"，实际按服务器分文件 `Storage/Players/{serverName}.xml`。
+- [x] **`HacknetServerTerminal/Players/PlayerData.cs:75` 过时注释**（已改为 `Storage/Players/{serverName}.xml`）：写"存储在 `Storage/Players.xml`"，实际按服务器分文件 `Storage/Players/{serverName}.xml`。
 
 ## 附录 B — 其他已确认的不一致
 
-- [~] **`PrivateMissionManager.TrySelect` 中的 PTR 更新循环为空**（已修：选定后把该 slot 的 Curr→Org 写入 `PlayerConfigLoader.CurrToOrgMappings`，由 `PlayerPtrFilterPatch` 在 filter 前替换；未编译，需实测。注意：只对本人 slot 生效，别人 slot 的占位符仍依赖 `PrivateMappings`）：`ClientPlugin/PrivateMissionManager.cs` 内 `myPtrs` 的 `foreach` 只有注释、没有实际写入映射 → 支线角色选定后 `#M-P1NAME#` 的动态解析可能未生效，需实测确认。
+- [~] **`PrivateMissionManager.TrySelect` 中的 PTR 更新循环为空**（已修：选定后把该 slot 的 Curr→Org 写入 `PlayerConfigLoader.CurrToOrgMappings`，由 `PlayerPtrFilterPatch` 在 filter 前替换；未编译，需实测。注意：只对本人 slot 生效，别人 slot 的占位符仍依赖 `PrivateMappings`）：`ClientPlugin/Missions/PrivateMissionManager.cs` 内 `myPtrs` 的 `foreach` 只有注释、没有实际写入映射 → 支线角色选定后 `#M-P1NAME#` 的动态解析可能未生效，需实测确认。
 - [x] **`SeedSyncGlobal/README.md` 与实现不符**（已按 v2.1.0 重写）：README 描述的是"全局模式 + 临时种子 0"的旧逻辑，代码（v2.1.0）实际从桌面 `.seed` 文件读取种子。
 - [ ] **属性体系文档与实现分叉**：设计文档统一用 `isPublic`/`filter`，实现统一用 `players`/`group`，需统一措辞以免误导扩展作者。
 

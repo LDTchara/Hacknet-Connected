@@ -170,7 +170,7 @@ public interface ISyncTarget
 沿用现有文本管道，但载荷一律 base64，**不再用冒号拼业务字段**（`EVENT:FILE` 已经因为路径里的冒号需要 base64 绕开）。
 
 ```
-统一格式（已实现，见 HNC.Sync.Core/SyncProtocol.cs）：
+统一格式（已实现，见 HNC.Sync.Core/Protocol/SyncProtocol.cs）：
 SYNC:{OP}:{scope 0/1/2}:{playerId|*}:{b64 key}:{ver}:{b64 payload}
 
 OP：HELLO 握手 / FULL 全量 / DELTA 增量 / PROPOSE 客户端提议 / REQ 请求全量 / MSG 自由通道（key=通道名）
@@ -217,7 +217,7 @@ Apply(remote data):
 |---|---|
 | `ServerPlugin` / `ClientPlugin` | 各加一个 `ISyncTransport` 实现；`EventReceiver` 增加 `SYNC:` 分发 |
 | `HacknetServerTerminal/NetworkManager` | 新增 `SYNC:` 的按 scope 路由 |
-| `ServerPlugin/MailServerAddMailPatch.cs` | 迁入 `DaemonAdapter` 钩子 |
+| `ServerPlugin/Patches/MailServerAddMailPatch.cs` | 迁入 `DaemonAdapter` 钩子 |
 | 重复文件（`SaveFileHelper` 等） | 不在本次范围，但 `Core` 必须单份 |
 | `ServerClientEventsMod` | 不改 |
 
@@ -242,7 +242,7 @@ Apply(remote data):
   这些 Daemon 在 `loadInit()` 里把子 `Folder` / `FileEntry` 缓存成字段，所以同步必须"原地改对象"。
 
 **实际做法**：把"文件夹树"作为同步对象。
-- `HNC.Sync.Core/FolderSync.cs`：`IFolderModel`（树的抽象）+ `FolderSyncTarget`（基线差异、文件/文件夹粒度增量、全量合并、文件顺序）。**不依赖游戏**，在 `HNC.Sync.Tests/FolderSyncTests.cs` 里用内存树测试。
+- `HNC.Sync.Core/Targets/FolderSync.cs`：`IFolderModel`（树的抽象）+ `FolderSyncTarget`（基线差异、文件/文件夹粒度增量、全量合并、文件顺序）。**不依赖游戏**，在 `HNC.Sync.Tests/FolderSyncTests.cs` 里用内存树测试。
 - `HNC.Sync.Adapters`：`HacknetFolderModel`（把 `Folder`/`FileEntry` 适配成 `IFolderModel`，所有修改原地进行）、`DaemonAdapter`、`DaemonSync`（`AddHandler` / `Install` / `RegisterAll`）。
 - 已适配：`MailServer`、`MessageBoardDaemon`、`IRCDaemon`（排除 `runtime`）、`UploadServerDaemon`。
 - 有意排除：`MissionListingServer` / `MissionHubServer` / `DLCHubServer`（持有活的 `ActiveMission` 列表，需与任务 / Scope 一起设计）。

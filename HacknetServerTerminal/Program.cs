@@ -291,6 +291,31 @@ internal class Program
                 var msg = await _pipeReader!.ReadLineAsync();
                 if (msg == null) break;
 
+                // 游戏进程每收到一条消息都会回一个 "OK"，没有人用它，不再逐条打印
+                if (msg == "OK") continue;
+
+                // ── 全员暂停：主机 F8 / F9；阶段进度：服务端报告已开始的阶段 ──
+                if (msg.StartsWith(HNC.Pause.PauseProtocol.Request))
+                {
+                    try { PauseManager.OnModRequest(msg); }
+                    catch (Exception pauseEx) { Console.WriteLine($"[Pipe] 暂停请求处理失败（非致命）: {pauseEx.Message}"); }
+                    continue;
+                }
+                if (msg.StartsWith(HNC.Pause.PauseProtocol.Phases))
+                {
+                    try { LobbyManager.OnPhases(msg); }
+                    catch (Exception phaseEx) { Console.WriteLine($"[Pipe] 阶段消息处理失败（非致命）: {phaseEx.Message}"); }
+                    continue;
+                }
+
+                // ── 准备大厅：服务端游戏的操作（准备 / 移出 / 强制开始 / 已准备完毕） ──
+                if (msg.StartsWith(HNC.Lobby.LobbyProtocol.Prefix))
+                {
+                    try { LobbyManager.OnModMessage(msg); }
+                    catch (Exception lobbyEx) { Console.WriteLine($"[Pipe] 大厅消息处理失败（非致命）: {lobbyEx.Message}"); }
+                    continue;
+                }
+
                 // ── 存档就绪：读盘 → 分块 → 有序广播（带进度条） ──
                 if (msg.StartsWith("SAVE_FILE_READY:"))
                 {

@@ -77,6 +77,9 @@
   <ItemGroup>
     <Compile Include="..\Shared\IrcChat\*.cs" LinkBase="IrcChat" />
     <Compile Include="..\Shared\RemovableTags\*.cs" LinkBase="RemovableTags" />
+    <Compile Include="..\Shared\Lobby\*.cs" LinkBase="Lobby" />
+    <Compile Include="..\Shared\Pause\*.cs" LinkBase="Pause" />
+    <Compile Include="..\Shared\Phases\*.cs" LinkBase="Phases" />
     <ProjectReference Include="..\HNC.Chat.Core\HNC.Chat.Core.csproj" Condition="'$(SingleDll)' != 'true'" />
   </ItemGroup>
 

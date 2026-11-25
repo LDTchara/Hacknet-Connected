@@ -109,7 +109,7 @@ ScopeManager
 ### 2.3 实现方式
 
 - `PlayerConfigLoader.LoadPrtMappings()` — 从 `Players-Cli.xml` 解析 PTR 映射
-- `PlayerPtrFilterPatch`（`ClientPlugin/Patches.cs`）— `ComputerLoader.filter()` 的 **Prefix** 补丁
+- `PlayerPtrFilterPatch`（`ClientPlugin/Patches/Patches.cs`）— `ComputerLoader.filter()` 的 **Prefix** 补丁
 - Prefix 做字符串替换：`#P1_IP#` → `#PLAYER_IP#`，再由原版 filter 解析 → `os.thisComputer.ip`
 - **不会产生循环调用**（Prefix 只做字符串替换，不调用 filter 自身）
 
@@ -184,34 +184,34 @@ Client A → LiteNetLib → Server → Broadcast(除 A 外) → Client B
 
 | 文件 | 作用 |
 |------|------|
-| `ClientPlugin/ScopeInfo.cs` | Scope 数据模型 |
-| `ClientPlugin/ScopeManager.cs` | Scope 存储（Global + Private + ConditionalWeakTable） |
-| `ClientPlugin/ScopePatches.cs` | 反序列化/序列化/Trigger/Check 门控补丁 |
-| `ClientPlugin/ScopeMissionPatches.cs` | Mission 元素 scope 预扫描 |
-| `ClientPlugin/PrivateMissionManager.cs` | 私有支线角色分配管理 |
-| `ClientPlugin/SelectPlayerCommand.cs` | selectplayer 命令处理器 |
-| `ClientPlugin/PrivateMissionContext.cs` | 私有任务上下文自动检测 |
-| `ServerPlugin/ScopeInfo.cs` | ServerPlugin 侧 Scope 模型（备用） |
-| `ServerPlugin/ScopeManager.cs` | ServerPlugin 侧 Scope 存储（备用） |
-| `ServerPlugin/ScopePatches.cs` | ServerPlugin 侧补丁（门控已改为 no-op，委托给 ClientPlugin） |
-| `ServerPlugin/ScopeMissionPatches.cs` | ServerPlugin 侧 Mission scope（备用） |
+| `ClientPlugin/Scope/ScopeInfo.cs` | Scope 数据模型 |
+| `ClientPlugin/Scope/ScopeManager.cs` | Scope 存储（Global + Private + ConditionalWeakTable） |
+| `ClientPlugin/Scope/ScopePatches.cs` | 反序列化/序列化/Trigger/Check 门控补丁 |
+| `ClientPlugin/Scope/ScopeMissionPatches.cs` | Mission 元素 scope 预扫描 |
+| `ClientPlugin/Missions/PrivateMissionManager.cs` | 私有支线角色分配管理 |
+| `ClientPlugin/Commands/SelectPlayerCommand.cs` | selectplayer 命令处理器 |
+| `ClientPlugin/Missions/PrivateMissionContext.cs` | 私有任务上下文自动检测 |
+| `ServerPlugin/Scope/ScopeInfo.cs` | ServerPlugin 侧 Scope 模型（备用） |
+| `ServerPlugin/Scope/ScopeManager.cs` | ServerPlugin 侧 Scope 存储（备用） |
+| `ServerPlugin/Scope/ScopePatches.cs` | ServerPlugin 侧补丁（门控已改为 no-op，委托给 ClientPlugin） |
+| `ServerPlugin/Scope/ScopeMissionPatches.cs` | ServerPlugin 侧 Mission scope（备用） |
 
 ### 修改文件
 
 | 文件 | 改动 |
 |------|------|
-| `ClientPlugin/Patches.cs` | 新增 `PlayerPtrFilterPatch`（filter Prefix 补丁） |
-| `ClientPlugin/PlayerConfigLoader.cs` | 新增 `CurrToOrgMappings` 字典、`LoadPrtMappings()`、`ClearMappings()` |
-| `ClientPlugin/PlayerData.cs` | 新增 `SelectPlayerConfig` 属性 |
-| `ClientPlugin/PlayerDataManager.cs` | 新增 `UpdateSelectPlayerConfig()`、加载时同步 `SelectPlayerConfig` |
+| `ClientPlugin/Patches/Patches.cs` | 新增 `PlayerPtrFilterPatch`（filter Prefix 补丁） |
+| `ClientPlugin/Players/PlayerConfigLoader.cs` | 新增 `CurrToOrgMappings` 字典、`LoadPrtMappings()`、`ClearMappings()` |
+| `ClientPlugin/Players/PlayerData.cs` | 新增 `SelectPlayerConfig` 属性 |
+| `ClientPlugin/Players/PlayerDataManager.cs` | 新增 `UpdateSelectPlayerConfig()`、加载时同步 `SelectPlayerConfig` |
 | `ClientPlugin/ClientPluginMain.cs` | 新增 `SelectPlayerConfig` 静态字段、PostLoad 注册命令 |
-| `ClientPlugin/EventReceiver.cs` | 新增 `PLAYER_SELECT`、`MISSION_READY` 事件处理 |
-| `ClientPlugin/GameLauncher.cs` | `StartExtensionSession()` 中调用 `PlayerConfigLoader.LoadFromExtension()` |
-| `HacknetServerTerminal/ServerProfile.cs` | 新增 `PlayersCount` 属性 |
-| `HacknetServerTerminal/ServerStorage.cs` | 新增 `PlayersCount` 解析 |
-| `HacknetServerTerminal/CommandHandler.cs` | `StartServer()` 通过 Pipe 查询 PlayersCount |
+| `ClientPlugin/Network/EventReceiver.cs` | 新增 `PLAYER_SELECT`、`MISSION_READY` 事件处理 |
+| `ClientPlugin/Core/GameLauncher.cs` | `StartExtensionSession()` 中调用 `PlayerConfigLoader.LoadFromExtension()` |
+| `HacknetServerTerminal/Persistence/ServerProfile.cs` | 新增 `PlayersCount` 属性 |
+| `HacknetServerTerminal/Persistence/ServerStorage.cs` | 新增 `PlayersCount` 解析 |
+| `HacknetServerTerminal/Commands/CommandHandler.cs` | `StartServer()` 通过 Pipe 查询 PlayersCount |
 | `HacknetServerTerminal/Program.cs` | `PLAYERS_COUNT:` 加入认可回复列表 |
-| `ServerPlugin/ServerManager.cs` | 新增 `GET_PLAYERS_COUNT` 处理器 |
+| `ServerPlugin/Network/ServerManager.cs` | 新增 `GET_PLAYERS_COUNT` 处理器 |
 
 ---
 

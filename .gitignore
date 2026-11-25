@@ -12,3 +12,22 @@ vs/
 .deepseek/
 *.log
 *.tmp
+
+# Local runtime state and developer settings
+/.claude/
+/OnlineSaves/
+/Storage/
+/ClientPlugin/ExampleStorage/
+/HacknetServerTerminal/Example/
+/HacknetServerTerminal/anywhere
+
+# Generated files and packaged outputs
+*.pdb
+*.zip
+*.rar
+*.7z
+FodyWeavers.xsd
+
+# Reference assemblies stay in libs as required by project HintPath entries
+**/libs/*.xml
+/ServerPlugin/libs/ServerClientEventsMod.dll
