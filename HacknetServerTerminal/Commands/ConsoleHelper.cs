@@ -87,7 +87,7 @@ internal static class CommandAutocomplete
 
     private static string[] GetCommands(string state, bool isLoggedIn)
     {
-        if (isLoggedIn) return new[] { "start", "lobby", "pause", "resume", "options", "logout", "help", "exit" };
+        if (isLoggedIn) return new[] { "start", "lobby", "pause", "resume", "team", "options", "logout", "help", "exit" };
 
         return state switch
         {

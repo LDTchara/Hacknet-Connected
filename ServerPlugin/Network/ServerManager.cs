@@ -206,7 +206,11 @@ internal static class ServerManager
                 var msg = await _pipeReader!.ReadLineAsync();
                 if (msg == null) break; // 管道关闭
 
-                if (msg.StartsWith("SYNC:") || msg.StartsWith("SYNC_FROM:") || msg.StartsWith("SYNC_JOIN:"))
+                // 节点上报（代理过载每 0.2 秒一条）不打印
+                if (msg.StartsWith("NODE_"))
+                {
+                }
+                else if (msg.StartsWith("SYNC:") || msg.StartsWith("SYNC_FROM:") || msg.StartsWith("SYNC_JOIN:"))
                     Console.WriteLine($"[ServerPlugin] ← Console: {msg.Substring(0, Math.Min(40, msg.Length))}...({msg.Length} 字符)");
                 else
                     Console.WriteLine($"[ServerPlugin] ← Console: {msg}");
@@ -249,6 +253,10 @@ internal static class ServerManager
             if (msg == null) break;
 
             // HNC.Sync 消息：先于 ':' 拆分处理，也不整条打印
+            ServerNodeSync.Observe(msg);   // 不消费：SYNC_JOIN 时重发共享节点状态
+            if (ServerNodeSync.TryHandlePipeMessage(msg)) continue;
+            if (ServerTeams.TryHandlePipeMessage(msg)) continue;
+            if (HNC.Flags.FlagSync.TryHandle(msg)) continue;
             if (ServerSync.TryHandlePipeMessage(msg)) continue;
             if (ServerMail.TryHandlePipeMessage(msg)) continue;
             if (ServerLobby.TryHandlePipeMessage(msg)) continue;

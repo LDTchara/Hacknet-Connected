@@ -93,6 +93,8 @@ public class ClientPluginMain : HacknetPlugin
         // 注册 selectplayer 命令
         SelectPlayerCommand.Register();
         SendMailCommand.Register();
+        ClientTeams.RegisterCommand();
+        ClientNodeSync.RegisterCommand();
         HNC.IrcChat.IrcChatFeature.Register();
         HNC.RemovableTags.RemovableTagsFeature.Register();
 
@@ -101,6 +103,8 @@ public class ClientPluginMain : HacknetPlugin
         {
             ScopeGatePatches.PatchExternalGates(_harmony);
             ScopeFactionPatches.Apply(_harmony);
+            // 全局 flag：标记剧情执行入口（此时其它 mod 的动作类型都已加载）
+            ClientFlags.Setup(_harmony);
         }
 
         Console.WriteLine("[ClientPlugin.PostLoad] Checking static Random fields...");

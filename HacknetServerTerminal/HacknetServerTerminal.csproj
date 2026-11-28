@@ -19,6 +19,9 @@
   <ItemGroup>
     <Compile Include="..\Shared\Lobby\LobbyProtocol.cs" Link="Lobby\LobbyProtocol.cs" />
     <Compile Include="..\Shared\Pause\PauseProtocol.cs" Link="Lobby\PauseProtocol.cs" />
+    <Compile Include="..\Shared\Teams\TeamProtocol.cs" Link="Lobby\TeamProtocol.cs" />
+    <Compile Include="..\Shared\NodeSync\NodeProtocol.cs" Link="Lobby\NodeProtocol.cs" />
+    <Compile Include="..\Shared\Flags\FlagProtocol.cs" Link="Lobby\FlagProtocol.cs" />
   </ItemGroup>
 
   <ItemGroup>

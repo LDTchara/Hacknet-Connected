@@ -80,6 +80,9 @@
     <Compile Include="..\Shared\Lobby\*.cs" LinkBase="Lobby" />
     <Compile Include="..\Shared\Pause\*.cs" LinkBase="Pause" />
     <Compile Include="..\Shared\Phases\*.cs" LinkBase="Phases" />
+    <Compile Include="..\Shared\Teams\*.cs" LinkBase="Teams" />
+    <Compile Include="..\Shared\NodeSync\*.cs" LinkBase="NodeSync" />
+    <Compile Include="..\Shared\Flags\*.cs" LinkBase="Flags" />
     <ProjectReference Include="..\HNC.Chat.Core\HNC.Chat.Core.csproj" Condition="'$(SingleDll)' != 'true'" />
   </ItemGroup>
 

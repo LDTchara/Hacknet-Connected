@@ -49,6 +49,10 @@ public class ServerPlugin : HacknetPlugin
     public override void PostLoad()
     {
         ServerMail.RegisterCommand();
+        ServerNodeSync.RegisterCommand();
+        ServerTeams.RegisterCommand();
+        // 全局 flag：标记剧情执行入口（此时其它 mod 的动作类型都已加载）
+        if (_harmony != null) ServerFlags.Setup(_harmony);
         HNC.IrcChat.IrcChatFeature.Register();
         HNC.RemovableTags.RemovableTagsFeature.Register();
 
@@ -273,6 +277,8 @@ internal static class ResetServerStatePatch
         ServerLobby.Reset();
         ServerPause.Reset();
         ServerPhases.Reset();
+        ServerNodeSync.Reset();
+        HNC.Flags.FlagSync.Reset();
     }
 }
 
@@ -303,6 +309,9 @@ internal static class GameUpdatePatch
         ServerLobby.Update();
         ServerPause.Update();
         ServerPhases.Update();
+        ServerNodeSync.Update();
+        ServerTeams.Update();
+        HNC.Flags.FlagSync.Update();
         ServerSync.Update();
         ServerMail.Update();
 

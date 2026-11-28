@@ -85,6 +85,7 @@ internal static class ServerLobby
         _awaitingGameReady = true;
         _readySince = null;
         ServerPhases.Reset();
+        ServerNodeSync.Reset();
     }
 
     // ═══════════════════════════════════════════════ 每帧（GameUpdatePatch）

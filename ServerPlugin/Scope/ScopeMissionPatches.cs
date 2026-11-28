@@ -296,7 +296,8 @@ public static class ScopeMissionPatches
                 StringComparison.OrdinalIgnoreCase);
         }
 
-        // 组私有（players="1" group="..."）：服务端不参与 selectplayer 分配 → 不匹配
-        return false;
+        // 组私有（players="1" group="..."）：主机通过组队任务（team）分到的位置
+        return HNC.Teams.TeamPlayer.MyIdentities.TryGetValue(scope.Group, out var mySlot)
+            && string.Equals(scope.Players, mySlot, StringComparison.OrdinalIgnoreCase);
     }
 }

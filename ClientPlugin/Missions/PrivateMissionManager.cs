@@ -207,6 +207,14 @@ public class PrivateMissionManager
 
     private static string FindPlayersCliXml()
     {
+        // 优先扩展目录（和 PlayerConfigLoader 一致），再回退到游戏目录
+        string ext = Hacknet.Extensions.ExtensionLoader.ActiveExtensionInfo?.GetFullFolderPath() ?? "";
+        if (ext.Length > 0)
+        {
+            foreach (var p in new[] { Path.Combine(ext, "Players-Cli.xml"), Path.Combine(ext, "Content", "Players-Cli.xml") })
+                if (File.Exists(p)) return p;
+        }
+
         string[] candidates =
         {
             "Players-Cli.xml",

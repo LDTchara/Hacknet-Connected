@@ -48,6 +48,9 @@ internal static class GameUpdatePatch
         // 心跳（PING/PONG，按真实时间——OS.currentElapsedTime 在暂停时不走）、掉线冻结与重连
         ClientPauseSync.Update();
         ClientPhases.Update();
+        ClientTeams.Update();
+        ClientNodeSync.Update();
+        HNC.Flags.FlagSync.Update();
         ClientSync.Update();
         PlayerMail.Update();
     }

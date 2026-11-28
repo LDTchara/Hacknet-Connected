@@ -53,15 +53,9 @@ internal static class EventForwarder
             ServerManager.SendEvent(
                 $"EVENT:DISCONNECT:{e.IPFrom}"));
 
-        // ── 端口事件 ──
-        EventManager<PlayerPortEvent>.AddHandler(e =>
-            ServerManager.SendEvent(
-                $"EVENT:PORT:{e.Computer?.idName}:{e.DisplayPort}:{e.CodePort}:{e.IsOpen}"));
-
-        // ── 防火墙事件 ──
-        EventManager<PlayerFirewallEvent>.AddHandler(e =>
-            ServerManager.SendEvent(
-                $"EVENT:FIREWALL:{e.Computer?.idName}:{e.State}"));
+        // ── 端口 / 防火墙 / 代理：不再作为 EVENT 转发 ──
+        // 默认每人自己破解；带 <HNCShared/> 的共享节点由 NodeSync（NODE_RPT / NODE_STATE）同步。
+        // （以前的 EVENT:PORT / FIREWALL / PROXY 收发格式对不上，实际一直没生效。）
 
         // ── 节点可见性变化（已禁用——每个节点在两 IP 间按帧来回跳，无意义） ──
         // EventManager<PlayerNodeVisibilityEvent>.AddHandler(e =>
@@ -73,25 +67,14 @@ internal static class EventForwarder
         //     ServerManager.SendEvent(
         //         $"EVENT:NODE_IP:{e.Computer?.idName}:{e.OldIP}:{e.NewIP}"));
 
-        // ── Action 触发 ──
-        EventManager<PlayerActionTriggeredEvent>.AddHandler(e =>
-            ServerManager.SendEvent(
-                $"EVENT:ACTION:{e.ActionType}:{e.XmlContent}"));
-
-        // ── Flag 变化 ──
-        EventManager<PlayerFlagEvent>.AddHandler(e =>
-            ServerManager.SendEvent(
-                $"EVENT:FLAG:{e.Flag}:{e.Action}"));
+        // ── 动作 / flag：不再作为 EVENT 转发 ──
+        // 每个玩家本机都在跑同一套剧情，再把动作复制给别人会让公开动作执行多次（邮件、IRC 消息重复）。
+        // 动作的效果由各自的同步负责：文件 EVENT:FILE、Daemon HNC.Sync、flag FlagSync（FLAG_SET）。
 
         // ── 任务事件 ──
         EventManager<PlayerMissionEvent>.AddHandler(e =>
             ServerManager.SendEvent(
                 $"EVENT:MISSION:{e.Action}:{e.MissionID}:{e.MissionFile}"));
-
-        // ── 代理事件 ──
-        EventManager<PlayerProxyEvent>.AddHandler(e =>
-            ServerManager.SendEvent(
-                $"EVENT:PROXY:{e.Computer?.idName}:{e.State}:{e.OverloadTicksRemaining}:{e.StartingOverloadTicks}"));
 
         // ── 邮件事件 ──
         EventManager<PlayerMailEvent>.AddHandler(e =>

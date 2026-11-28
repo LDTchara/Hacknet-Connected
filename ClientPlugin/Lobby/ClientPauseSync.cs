@@ -75,6 +75,7 @@ internal static class ClientPauseSync
                 _resumeSent = false;
                 _lastPong = DateTime.UtcNow;
                 HncPause.Clear(HncPause.ReasonNet);
+                ClientNodeSync.ResendConnection();
                 Console.WriteLine("[Pause] 已重连，原地继续");
             }
             else

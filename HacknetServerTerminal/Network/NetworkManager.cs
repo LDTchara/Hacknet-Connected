@@ -33,25 +33,44 @@ internal static class NetworkManager
     /// <summary>_clients 的锁：LiteNetLib 轮询线程、Pipe 读线程、命令行线程都会访问</summary>
     private static readonly object _clientsLock = new();
 
-    public static void Start(int port)
+    /// <summary>当前监听的 UDP 端口（来自服务器配置的 Port，start 时开始监听）</summary>
+    public static int Port { get; private set; }
+
+    public static bool IsRunning => _netManager?.IsRunning == true;
+
+    /// <summary>
+    /// 在指定 UDP 端口开始监听。已在同一端口监听则什么都不做；端口不同则先停掉旧的。
+    /// 返回 false = 端口绑定失败。
+    /// </summary>
+    public static bool Start(int port)
     {
+        if (IsRunning && Port == port) return true;
+        if (IsRunning) Stop();
+
         var listener = new ServerNetListener();
-        _netManager = new NetManager(listener)
+        var nm = new NetManager(listener)
         {
             AutoRecycle = true,
             UpdateTime = 15,
             PingInterval = 2000,
             DisconnectTimeout = 30000
         };
-        _netManager.Start(port);
-        Console.WriteLine($"[网络] LiteNetLib 监听端口 {port}");
+        if (!nm.Start(port))
+        {
+            Console.WriteLine($"[网络] 无法监听 UDP 端口 {port}（可能被占用）");
+            return false;
+        }
+        _netManager = nm;
+        Port = port;
+        Console.WriteLine($"[网络] LiteNetLib 监听 UDP 端口 {port}");
 
+        // 轮询循环只认自己这个 NetManager：重启监听后旧循环自然结束，不会和新循环同时轮询
         _ = Task.Run(async () =>
         {
             var lastTick = DateTime.UtcNow;
-            while (_netManager is { IsRunning: true })
+            while (nm.IsRunning)
             {
-                _netManager.PollEvents();
+                nm.PollEvents();
 
                 // 每秒检查一次游戏中客户端的心跳（和网络回调在同一个线程）
                 if ((DateTime.UtcNow - lastTick).TotalSeconds >= 1)
@@ -64,11 +83,15 @@ internal static class NetworkManager
                 await Task.Delay(15);
             }
         });
+        return true;
     }
 
     public static void Stop()
     {
-        _netManager?.Stop();
+        if (_netManager == null) return;
+        _netManager.Stop();
+        _netManager = null;
+        lock (_clientsLock) _clients.Clear();
         Console.WriteLine("[网络] LiteNetLib 已停止");
     }
 
@@ -271,6 +294,7 @@ internal class ServerNetListener : INetEventListener
     {
         Console.WriteLine($"[网络] 客户端已断开 (Peer={peer.Id}, {info.Reason})");
         PauseManager.OnPeerDisconnected(peer.Id);
+        NodeRelay.OnClientGone(peer.Id);
         LobbyManager.OnPeerDisconnected(peer.Id);
         NetworkManager.RemoveClient(peer.Id);
         NetworkManager.BroadcastPlayerList();
@@ -335,7 +359,9 @@ internal class ServerNetListener : INetEventListener
     public void OnNetworkReceive(NetPeer peer, NetPacketReader reader, byte ch, DeliveryMethod dm)
     {
         var msg = reader.GetString();
-        NetworkManager.Log("NET_RCV", $"Peer={peer.Id}: {msg}");
+        // 心跳和共享节点上报很频繁（代理过载时每 0.2 秒一条），不写日志
+        if (!msg.StartsWith("PING:") && !msg.StartsWith("NODE_RPT:"))
+            NetworkManager.Log("NET_RCV", $"Peer={peer.Id}: {msg}");
 
         // ── 握手：HELLO:playerName ──
         // 只做临时登记并请求世界种子。真正的玩家身份（PlayerId、存档、玩家列表）在加入大厅时确定，
@@ -354,6 +380,27 @@ internal class ServerNetListener : INetEventListener
         if (msg.StartsWith(HNC.Lobby.LobbyProtocol.Prefix))
         {
             LobbyManager.OnClientMessage(peer, msg);
+            return;
+        }
+
+        // ── 组队任务 ──
+        if (msg.StartsWith(HNC.Teams.TeamProtocol.Prefix))
+        {
+            TeamManager.OnClientMessage(peer, msg);
+            return;
+        }
+
+        // ── 全局 flag ──
+        if (msg.StartsWith(HNC.Flags.FlagProtocol.Prefix))
+        {
+            FlagRelay.OnClientMessage(peer, msg);
+            return;
+        }
+
+        // ── 节点同步：共享节点上报 / 分享 ──
+        if (msg.StartsWith(HNC.NodeSync.NodeProtocol.Prefix))
+        {
+            NodeRelay.OnClientMessage(peer, msg);
             return;
         }
 

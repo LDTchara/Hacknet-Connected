@@ -28,10 +28,13 @@ HNC 仅支持可信局域网内的联机。请自行判断联机对象、扩展�
 
 | 功能 | 谁用 | 说明 |
 |---|---|---|
-| 世界同步 | 自动 | 种子与随机状态同步，各端生成同一个世界；玩家操作（文件、端口、防火墙、代理、flag 等）实时转发 |
+| 世界同步 | 自动 | 种子与随机状态同步，各端生成同一个世界；文件变化实时转发 |
+| 全局 flag | 自动 / 扩展作者 | 剧情里加的 flag 所有人共享，带 Scope 的只给那个玩家，引擎自己的 flag（启动失败等）留在本机 |
+| 节点破解进度 | 扩展作者 / 玩家 | 端口 / 代理 / 防火墙默认每人自己破解；节点加 `<HNCShared/>` 后全局共享（防火墙分析进度、代理过载速率叠加）；`share` 命令分享自己的破解进度 |
 | 角色与占位符 | 扩展作者 | `#P1NAME#` / `#P1_IP#` 等占位符，按玩家选的角色替换成实际玩家；每个角色有自己的电脑 |
 | Scope 门控 | 扩展作者 | 在动作 / 条件 / 任务上加 `players`、`group`，让某段剧情只在指定玩家那里执行 |
-| 支线角色选择 | 玩家 | `selectplayer` 命令，私有支线开始前分配角色 |
+| 组队任务 | 玩家 | 任务板接组队任务先到先得锁定，`team` 命令组队、确认、提交后全队同时开始 |
+| 支线角色选择（旧） | 玩家 | `selectplayer` 命令，建议改用 `team` |
 | 准备大厅 | 玩家 | 开局前等人、准备、移出、满员拒绝、聊天；服务端先进游戏，再放客户端进来 |
 | 全员暂停 | 自动 / 主机 | 任何人掉线全员暂停，重连后原地继续；主机可手动暂停 / 强制继续 |
 | 阶段预设 | 扩展作者 | 中途加入的玩家按自己的角色选一个阶段预设，等该阶段开始后进入 |
@@ -82,19 +85,19 @@ Output\Client\BepInEx\plugins\  → 客户端游戏的 BepInEx\plugins\   （See
 1. 先打开终端 `HacknetServerTerminal.exe`，它会等待游戏连接。
 2. 启动 Hacknet，进入扩展详情页，点 **[ Start Server ]**。
 3. 回到终端按 **Y** 确认。
-4. 第一次需要先建一个服务器配置：`create <名字>` → `set port 9050` → `set hostaccountname <主机账户>` → `set hostaccountpassword <密码>` → `save`。
+4. 第一次需要先建一个服务器配置：`create <名字>` → `set port <端口，如 9050>` → `set hostaccountname <主机账户>` → `set hostaccountpassword <密码>` → `save`。
 5. `login <名字>` → `start`：游戏里弹出**准备大厅**，等客户端加入。
 6. 所有人都点 **Ready** 后开局：满员直接开局；人数不足时主机会被问是否强制开始。
 7. 游戏中：**F8** 全员暂停，**F9** 强制继续。终端也可以用 `pause`、`resume`、`lobby`、`status`、`help`。
 
-> **端口**：终端目前**固定监听 UDP 9050**。配置里的 `Port` 只用来检查端口是否被占用，客户端要连 9050。
-> 跨网络联机时，服务端要放行或转发 **UDP 9050**。
+> **端口**：终端在 `start` 时按服务器配置的 `Port` 开始监听 **UDP**（`start` 之前不监听），客户端添加服务器时填同一个端口。
+> 局域网内联机时，服务端的防火墙要允许这个 UDP 端口入站。公网 / 异地联机不在支持范围内（见上方"使用范围"）。
 
 终端在**工作目录**下的 `Storage\` 里保存服务器配置（`Storages.ini`）、玩家名单和每个玩家的存档。日志写在工作目录的 `net_log.txt` 和桌面的 `TerminalLog_日期.txt`。
 
 ### 加入（客户端）
 1. 启动 Hacknet，进入**同一个扩展**的详情页，点 **[ Connect to Server ]**。
-2. **Add Server**：填名字、服务器 IP、端口 `9050`。
+2. **Add Server**：填名字、服务器 IP、服务器配置里的端口。
 3. 选中服务器 → **Add Account**：填显示名和密码。这是你在这个服务器上的身份，服务端按这个名字保存你的存档。
 4. 点账户的 **Login**，进入准备大厅，点 **Ready** 等待开局。开局后会自动进入游戏。
 5. 游戏开始后才加入的人：大厅里直接点 **Start Game**。如果扩展提供了阶段预设，也可以选一个阶段进入。
@@ -102,7 +105,7 @@ Output\Client\BepInEx\plugins\  → 客户端游戏的 BepInEx\plugins\   （See
 客户端的服务器列表和账户保存在游戏目录下的 `OnlineSaves\ClientProfiles.ini`。
 
 ### 常见问题
-- **一直停在 "Connecting to the lobby"**：终端没开或者是旧版本，或者 9050 端口不通。
+- **一直停在 "Connecting to the lobby"**：终端没开或者是旧版本，或者端口填错 / 不通（终端 `status` 可以看到实际监听的端口）。
 - **"The server has not opened the lobby yet"**：终端还没 `start`，开放后会自动加入。
 - **同一台电脑上同时跑服务端和客户端测试**：两个游戏共用同一个存档目录（`我的文档\My Games\HacknetPathfinder\Accounts\…`），存档可能互相覆盖。存档或世界看起来不对时，先怀疑这一点。
 
@@ -159,7 +162,7 @@ p1                ← 第一行：本机玩家的角色
 <RunFunction FunctionName="..." players="PUBLIC" />      <!-- 所有人都执行（不写属性也一样） -->
 ```
 
-私有支线开始前，玩家用 `selectplayer list` / `selectplayer <序号>` 分配支线角色。详见 [README.ScopeSystem.md](README.ScopeSystem.md)。
+多人支线由玩家在任务板接取后用 `team` 命令组队，提交后自动分配支线角色，详见 [README.Teams.md](README.Teams.md)；Scope 属性详见 [README.ScopeSystem.md](README.ScopeSystem.md)。
 
 ### 3. 中途加入：阶段预设
 把流程切成 A → B → C… 多个阶段，每个阶段按角色准备一份预设（起始任务、起始动作、flag）。游戏开始后才加入的新玩家可以选一个阶段，等它开始后进入。详见 [README.Phases.md](README.Phases.md)。
@@ -186,7 +189,7 @@ p1                ← 第一行：本机玩家的角色
 
 ```
  客户端游戏 ──┐
- 客户端游戏 ──┼── LiteNetLib（UDP 9050，文本消息）── 终端 ── 命名管道 HacknetServerPipe（逐行文本）── 服务端游戏
+ 客户端游戏 ──┼── LiteNetLib（UDP，端口取服务器配置，文本消息）── 终端 ── 命名管道 HacknetServerPipe（逐行文本）── 服务端游戏
  客户端游戏 ──┘                                       │
                                                       └─ Storage\：服务器配置、玩家名单、每个玩家的存档
 ```
@@ -201,7 +204,9 @@ p1                ← 第一行：本机玩家的角色
 - **玩家节点**：IP 和位置由"主种子 + 节点 id"派生，不依赖随机数流。
 
 ### 运行时同步
-- **玩家操作事件**：ServerClientEventsMod 的检测器（文件、端口、防火墙、代理、flag、任务、连接…）产生 `EVENT:…`，经终端广播；EventReceiver 应用到本地。应用时用 `Suppress` 标记防止事件被再次转发形成回环。
+- **玩家操作事件**：ServerClientEventsMod 的检测器（文件、任务、连接…）产生 `EVENT:…`，经终端广播；EventReceiver 应用到本地。应用时用 `Suppress` 标记防止事件被再次转发形成回环。动作不再复制（每人本机跑同一套剧情，复制会让公开动作执行多次）。
+- **全局 flag**：按 flag 是在哪里增删的决定范围（剧情 → 所有人；带 Scope → 本人；引擎 → 本机），终端保存全局集合并转发，见 [README.Flags.md](README.Flags.md)。
+- **节点破解进度**：端口 / 代理 / 防火墙不走 `EVENT`。默认不同步；共享节点由服务端权威同步（`NODE_RPT` 上报、`NODE_STATE` 广播），见 [README.NodeSync.md](README.NodeSync.md)。
 - **状态同步**（HNC.Sync，`SYNC:…`）：引擎检测已注册对象的字段变化，发增量或全量。原版 Daemon（邮件服务器、留言板、IRC、上传服务器）按文件夹树同步。玩家加入时（`SYNC_JOIN`）服务端发全量。
 - **存档**：终端按玩家名保存存档。客户端每次存档时自动上传（30 秒冷却）。加入大厅时，终端告诉客户端有没有它的存档（`HAS_SAVE` + 分块传输，或 `NO_SAVE`）。
 
@@ -234,6 +239,9 @@ p1                ← 第一行：本机玩家的角色
 | `LOBBY_…` | 三方 | 准备大厅、聊天 |
 | `PING` / `PONG` / `HNC_PAUSE…` | 三方 | 心跳与全员暂停 |
 | `HNC_PHASES` | 服务端 → 终端 → 客户端 | 阶段进度 |
+| `TEAM_…` | 客户端 ↔ 终端 | 组队任务：锁定、team 命令、开始 |
+| `NODE_…` | 三方 | 共享节点的上报 / 权威状态、`share` 分享 |
+| `FLAG_SET` / `FLAG_ALL` | 三方 | 全局 flag 的增删与补发 |
 | `MAIL…` / `PLAYERS` | 三方 | 玩家邮件 |
 | `LAUNCH_SERVER` / `CREATE_ACCOUNT` / `GET_PLAYERS_COUNT` / `SYNC_FILES` … | 终端 → 服务端 | 终端命令 |
 
@@ -255,11 +263,10 @@ p1                ← 第一行：本机玩家的角色
 - 游戏程序集引用在各项目的 `libs\` 里。
 
 ### 文档索引
-[README.Lobby.md](README.Lobby.md) · [README.Phases.md](README.Phases.md) · [README.ScopeSystem.md](README.ScopeSystem.md) · [README.IrcChat.md](README.IrcChat.md) · [README.PlayerMail.md](README.PlayerMail.md) · [README.RemovableTags.md](README.RemovableTags.md) · [GUIDE.SyncForModAuthors.md](GUIDE.SyncForModAuthors.md) · [DESIGN.SyncLayer.md](DESIGN.SyncLayer.md) · [TODO.ScopeAdaptation.md](TODO.ScopeAdaptation.md)
+[README.Lobby.md](README.Lobby.md) · [README.Teams.md](README.Teams.md) · [README.NodeSync.md](README.NodeSync.md) · [README.Flags.md](README.Flags.md) · [README.Phases.md](README.Phases.md) · [README.ScopeSystem.md](README.ScopeSystem.md) · [README.IrcChat.md](README.IrcChat.md) · [README.PlayerMail.md](README.PlayerMail.md) · [README.RemovableTags.md](README.RemovableTags.md) · [GUIDE.SyncForModAuthors.md](GUIDE.SyncForModAuthors.md) · [DESIGN.SyncLayer.md](DESIGN.SyncLayer.md) · [TODO.ScopeAdaptation.md](TODO.ScopeAdaptation.md)
 
 ### 已知问题（摘要）
 - 大部分功能未经游戏内实测，见上方"状态"。
-- 终端端口固定 9050，配置里的 `Port` 没有真正生效。
 - 暂停期间到期的延时动作（`ActionDelayer` 按真实时间）会在恢复后一起执行。
 - 玩家整个游戏进程重启后重新登录，终端那份存档可能比本地旧，会覆盖本地（存档版本戳方案未做）。
 - Scope 还有若干缺口（Faction rank 同步、Sequencer、HackScript 内容等），见 [TODO.ScopeAdaptation.md](TODO.ScopeAdaptation.md)。

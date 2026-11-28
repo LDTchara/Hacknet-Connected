@@ -63,33 +63,21 @@ internal static class EventForwarderClient
         EventManager<PlayerDisconnectFromCompEvent>.AddHandler(e =>
             SendOrLog($"EVENT:DISCONNECT:{e.IPFrom}"));
 
-        // ── 端口事件 ──
-        EventManager<PlayerPortEvent>.AddHandler(e =>
-            SendOrLog($"EVENT:PORT:{e.Computer?.idName}:{e.DisplayPort}:{e.CodePort}:{e.IsOpen}"));
-
-        // ── 防火墙事件 ──
-        EventManager<PlayerFirewallEvent>.AddHandler(e =>
-            SendOrLog($"EVENT:FIREWALL:{e.Computer?.idName}:{e.State}"));
+        // ── 端口 / 防火墙 / 代理：不再作为 EVENT 转发 ──
+        // 默认每人自己破解；带 <HNCShared/> 的共享节点由 NodeSync（NODE_RPT / NODE_STATE）同步。
+        // （以前的 EVENT:PORT / FIREWALL / PROXY 收发格式对不上，实际一直没生效。）
 
         // ── 节点可见性变化（静默，不同步） ──
         // 已完全移除订阅，Hacknet 每秒数十次 IP 轮转会触发，
         // 不需要转发也不需要本地日志。
 
-        // ── Action 触发 ──
-        EventManager<PlayerActionTriggeredEvent>.AddHandler(e =>
-            SendOrLog($"EVENT:ACTION:{e.ActionType}:{e.XmlContent}"));
-
-        // ── Flag 变化 ──
-        EventManager<PlayerFlagEvent>.AddHandler(e =>
-            SendOrLog($"EVENT:FLAG:{e.Flag}:{e.Action}"));
+        // ── 动作 / flag：不再作为 EVENT 转发 ──
+        // 每个玩家本机都在跑同一套剧情，再把动作复制给别人会让公开动作执行多次（邮件、IRC 消息重复）。
+        // 动作的效果由各自的同步负责：文件 EVENT:FILE、Daemon HNC.Sync、flag FlagSync（FLAG_SET）。
 
         // ── 任务事件 ──
         EventManager<PlayerMissionEvent>.AddHandler(e =>
             SendOrLog($"EVENT:MISSION:{e.Action}:{e.MissionID}:{e.MissionFile}"));
-
-        // ── 代理事件 ──
-        EventManager<PlayerProxyEvent>.AddHandler(e =>
-            SendOrLog($"EVENT:PROXY:{e.Computer?.idName}:{e.State}:{e.OverloadTicksRemaining}:{e.StartingOverloadTicks}"));
 
         // ── 游戏保存事件 → 自动上传存档（30 秒冷却） ──
         ServerClientEventsMod.Events.PlayerEventAPI.OnSaveGame += os =>

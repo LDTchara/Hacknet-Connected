@@ -95,6 +95,10 @@ internal static class CommandHandler
                     PauseManager.ForceResume();
                     PauseManager.PrintStatus();
                     return;
+                case "team":
+                case "teams":
+                    TeamManager.PrintStatus();
+                    return;
                 case "creataccount":
                     await CreateAccountSave();
                     return;
@@ -151,6 +155,7 @@ internal static class CommandHandler
                     Console.WriteLine("  lobby         - 查看准备大厅状态；lobby kick <id> 移出客户端");
                     Console.WriteLine("  pause         - 全员暂停（服务端游戏里也可按 F8）");
                     Console.WriteLine("  resume        - 强制继续：解除所有暂停，不再等掉线的人（服务端游戏里也可按 F9）");
+                    Console.WriteLine("  team          - 查看组队任务的所有队伍");
                     Console.WriteLine("  creataccount  - 创建账户存档（存档不存在时）");
                     Console.WriteLine("  retryevents   - 重试因管道背压未送达模组的事件");
                     Console.WriteLine("  players       - 管理已知玩家列表 (list/add/remove/edit)");
@@ -333,9 +338,16 @@ internal static class CommandHandler
             return;
         }
 
-        if (!IsPortAvailable(int.Parse(p.Port)))
+        if (!int.TryParse(p.Port, out int port) || port < 1 || port > 65535)
         {
-            Console.WriteLine($"端口 {p.Port} 已被占用！");
+            Console.WriteLine($"端口 \"{p.Port}\" 无效（应为 1~65535）。");
+            return;
+        }
+
+        // 已经由本终端在这个端口监听（例如上次 start 过）就不算占用
+        if (!(NetworkManager.IsRunning && NetworkManager.Port == port) && !IsPortAvailable(port))
+        {
+            Console.WriteLine($"UDP 端口 {port} 已被占用！");
             return;
         }
 
@@ -422,6 +434,11 @@ internal static class CommandHandler
 
         // 不再立刻开局：先开放准备大厅，全员准备后由 LobbyManager 发出这条 LAUNCH_SERVER
         var msg = $"LAUNCH_SERVER:{p.ServerName}:{p.HostAccountName}:{p.HostAccountPassword}:{p.Port}";
+
+        // 按配置的端口开始监听（客户端连这个端口）
+        if (!NetworkManager.Start(port))
+            return;
+
         LobbyManager.Open(p, msg);
 
         // start 后保持登录态，用户可继续使用 refresh/broadcast 等命令
@@ -591,14 +608,12 @@ internal static class CommandHandler
         }
     }
 
+    /// <summary>UDP 端口是否空闲（LiteNetLib 用 UDP，以前这里查的是 TCP）</summary>
     private static bool IsPortAvailable(int port)
     {
         try
         {
-            var listener = new System.Net.Sockets.TcpListener(
-                System.Net.IPAddress.Loopback, port);
-            listener.Start();
-            listener.Stop();
+            using var udp = new System.Net.Sockets.UdpClient(port);
             return true;
         }
         catch
@@ -824,7 +839,9 @@ internal static class CommandHandler
 
     private static void ShowNetworkStatus()
     {
-        Console.WriteLine($"网络端口: 9050");
+        Console.WriteLine(NetworkManager.IsRunning
+            ? $"网络端口: UDP {NetworkManager.Port}"
+            : "网络端口: 未监听（login 后 start 时按配置的 Port 开始监听）");
         Console.WriteLine($"已连接客户端: {NetworkManager.PeerCount}");
         if (NetworkManager.PeerCount > 0)
         {

@@ -48,6 +48,12 @@ internal static class LobbyManager
         get { lock (_lock) return _state.Phase; }
     }
 
+    /// <summary>服务端主机的账户名（大厅名单上显示的；还没 start 时为空）</summary>
+    public static string HostName
+    {
+        get { lock (_lock) return _state.HostName; }
+    }
+
     // ═══════════════════════════════════════════════ 开放大厅
 
     /// <summary>start 命令调用：开放大厅（不立即开局）。已经开放过返回 false。</summary>
@@ -70,6 +76,8 @@ internal static class LobbyManager
             _chatHistory.Clear();
             _phasesMsg = HNC.Pause.PauseProtocol.Phases;
             PauseManager.Reset();
+            TeamManager.Open(profile.ServerName);
+            FlagRelay.Open(profile.ServerName);
 
             SendToMod($"{LobbyProtocol.Open}{_state.Capacity}:{LobbyProtocol.ToB64(profile.ServerName)}");
             SendToMod(_state.Encode());
@@ -187,6 +195,9 @@ internal static class LobbyManager
             // 当前的全员暂停状态和已开始的阶段（中途加入的人据此选预设、进游戏后照此暂停）
             PauseManager.SendStateTo(peer);
             NetworkManager.SendTo(peer, _phasesMsg);
+            // 已开始的组队任务：补发支线身份分配；他是成员但还没接任务的补发 TEAM_START
+            TeamManager.OnPlayerJoined(peer, member.PlayerId);
+            FlagRelay.SendAllTo(peer);
             Evaluate();
         }
     }
@@ -251,14 +262,22 @@ internal static class LobbyManager
         }
         else if (msg == LobbyProtocol.GameReady)
         {
+            bool ready = false;
             lock (_lock)
             {
                 if (_state.Phase != LobbyPhase.Launching) return;
+                ready = true;
                 _state.Phase = LobbyPhase.InGame;
                 Console.WriteLine($"[大厅] 服务端已准备完毕，通知 {_state.Count} 个客户端进入游戏");
                 BroadcastState();
                 foreach (var peer in _peers.Values)
                     NetworkManager.SendTo(peer, LobbyProtocol.Start);
+            }
+            // 主机也是玩家：补发它在已开始组队任务里的分配（在大厅锁外调用）
+            if (ready)
+            {
+                TeamManager.OnHostReady();
+                FlagRelay.SendAllToHost();
             }
         }
     }

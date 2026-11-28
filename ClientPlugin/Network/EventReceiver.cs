@@ -48,6 +48,12 @@ internal static class EventReceiver
             if (ClientPauseSync.TryHandle(msg)) return;
             // 阶段进度（服务端报告已开始的阶段）
             if (ClientPhases.TryHandle(msg)) return;
+            // 全局 flag（FLAG_SET / FLAG_ALL）
+            if (HNC.Flags.FlagSync.TryHandle(msg)) return;
+            // 组队任务（TEAM_MSG / TEAM_START / TEAM_APPLY）
+            if (ClientTeams.TryHandle(msg)) return;
+            // 节点同步（共享节点状态、分享；代理过载时每 0.2 秒一条，不打印）
+            if (ClientNodeSync.TryHandle(msg)) return;
 
             Console.WriteLine($"[EventRecv] {msg}");
 
@@ -72,11 +78,15 @@ internal static class EventReceiver
                 case "FILE": HandleFileEvent(paramStr); break;
                 //case "NODE_VIS": HandleNodeVisibility(paramStr); break;
                 //case "NODE_IP": HandleNodeIPChange(paramStr); break;
-                case "FIREWALL": HandleFirewallEvent(paramStr); break;
-                case "PROXY": HandleProxyEvent(paramStr); break;
-                case "PORT": HandlePortEvent(paramStr); break;
-                case "ACTION": HandleActionEvent(paramStr); break;
-                case "FLAG": HandleFlagEvent(paramStr); break;
+                // FIREWALL / PROXY / PORT：已改由 NodeSync 同步（只同步共享节点），旧版本发来的直接忽略
+                case "FIREWALL":
+                case "PROXY":
+                case "PORT":
+                    break;
+                // ACTION / FLAG：不再复制动作（会导致重复执行），flag 改由 FlagSync 同步；旧版本发来的直接忽略
+                case "ACTION":
+                case "FLAG":
+                    break;
                 case "WORLD_SEED":
                     // 通过 EVENT: 路径到达的世界种子消息，重建原始格式交给系统处理器
                     HandleSystemMessage($"WORLD_SEED:{paramStr}");
@@ -510,154 +520,6 @@ internal static class EventReceiver
 
         comp.ip = newIP;
         //Console.WriteLine($"[EventRecv] IP changed: {compID} {oldIP} → {newIP}");
-    }
-
-    // ── 防火墙状态 ──
-
-    private static void HandleFirewallEvent(string paramStr)
-    {
-        // 格式：compID:isOpen
-        var parts = SplitParam(paramStr, 2);
-        if (parts.Length < 2) return;
-
-        string compID = parts[0];
-        bool isOpen = parts[1] == "True" || parts[1] == "true";
-
-        var comp = FindComputer(compID);
-        if (comp?.firewall == null) return;
-
-        comp.firewall.solved = isOpen;
-        if (isOpen) comp.firewallAnalysisInProgress = false;
-        Console.WriteLine($"[EventRecv] Firewall: {compID} solved={isOpen}");
-    }
-
-    // ── 代理状态 ──
-
-    private static void HandleProxyEvent(string paramStr)
-    {
-        // 格式：compID:isActive
-        var parts = SplitParam(paramStr, 2);
-        if (parts.Length < 2) return;
-
-        string compID = parts[0];
-        bool isActive = parts[1] == "True" || parts[1] == "true";
-
-        var comp = FindComputer(compID);
-        if (!comp.hasProxy) return;
-
-        if (isActive && !comp.proxyActive)
-        {
-            comp.proxyActive = true;
-            comp.proxyOverloadTicks = 0f;
-        }
-        else if (!isActive)
-        {
-            comp.proxyActive = false;
-        }
-        Console.WriteLine($"[EventRecv] Proxy: {compID} active={isActive}");
-    }
-
-    // ── 端口状态 ──
-
-    private static void HandlePortEvent(string paramStr)
-    {
-        // 格式：compID:displayPort:codePort:isOpen
-        var parts = SplitParam(paramStr, 4);
-        if (parts.Length < 4) return;
-
-        string compID = parts[0];
-        int codePort = int.TryParse(parts[2], out var cp) ? cp : 0;
-        bool isOpen = parts[3] == "True" || parts[3] == "true";
-
-        var comp = FindComputer(compID);
-        if (comp == null) return;
-
-        if (isOpen && !comp.portsOpen.Contains((byte)codePort))
-        {
-            comp.portsOpen.Add((byte)codePort);
-        }
-        else if (!isOpen && comp.portsOpen.Contains((byte)codePort))
-        {
-            comp.portsOpen.Remove((byte)codePort);
-        }
-        Console.WriteLine($"[EventRecv] Port: {compID} port={codePort} open={isOpen}");
-    }
-
-    // ── Action 触发 ──
-
-    private static void HandleActionEvent(string paramStr)
-    {
-        // 格式：actionType:xmlContent
-        var colonIdx = paramStr.IndexOf(':');
-        if (colonIdx < 0) return;
-
-        string actionType = paramStr.Substring(0, colonIdx);
-        string xmlContent = paramStr.Substring(colonIdx + 1);
-
-        try
-        {
-            using var sr = new StringReader(xmlContent);
-            using var rdr = XmlReader.Create(sr);
-            rdr.MoveToContent();
-
-            // 反序列化——ScopePatches.ActionDeserializePostfix 会自动读取
-            // players/group 并注册到 ScopeManager
-            var action = SerializableAction.Deserialize(rdr);
-            if (action == null) return;
-
-            // scope 检查：私有 action 只对匹配身份的客户端生效
-            var scope = ScopeManager.GetScope(action);
-            if (scope != null && scope.IsPrivate)
-            {
-                string myGloble = ClientPluginMain.SelectPlayerConfig ?? "";
-                bool allowed = string.IsNullOrEmpty(scope.Group)
-                    ? string.Equals(scope.Players, myGloble, StringComparison.OrdinalIgnoreCase)
-                    : ScopePatches.MyPrivateIdentities.TryGetValue(scope.Group, out var myName)
-                      && string.Equals(scope.Players, myName, StringComparison.OrdinalIgnoreCase);
-
-                if (!allowed)
-                {
-                    Console.WriteLine($"[EventRecv] Action {actionType} skipped (scope not matched)");
-                    return;
-                }
-            }
-
-            var os = OS.currentInstance;
-            if (os == null) return;
-
-            // 执行——置 SuppressBroadcast 防回环（否则 Trigger 会被拦截器再次广播）
-            PlayerActionTriggeredEvent.SuppressBroadcast = true;
-            try { action.Trigger(os); }
-            finally { PlayerActionTriggeredEvent.SuppressBroadcast = false; }
-
-            Console.WriteLine($"[EventRecv] Action executed: {actionType}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[EventRecv] Action execute failed: {ex.Message}");
-        }
-    }
-
-    // ── Flag 变化 ──
-
-    private static void HandleFlagEvent(string paramStr)
-    {
-        // 格式：flag:action (add/remove)
-        var parts = SplitParam(paramStr, 2);
-        if (parts.Length < 2) return;
-
-        string flag = parts[0];
-        string action = parts[1];
-
-        var os = OS.currentInstance;
-        if (os == null) return;
-
-        if (action == "add" && !OS.currentInstance.Flags.Flags.Contains(flag))
-            os.Flags.AddFlag(flag);
-        else if (action == "remove")
-            os.Flags.RemoveFlag(flag);
-
-        Console.WriteLine($"[EventRecv] Flag: {flag} {action}");
     }
 
     // ── 文件操作工具方法 ──

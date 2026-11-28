@@ -256,7 +256,8 @@ internal class Program
 
             _ = Task.Run(() => PipeListenLoop(_pipeCts.Token));
 
-            NetworkManager.Start(9050);
+            // 网络监听不在这里开：login 后 start 时按服务器配置的 Port 开始监听（同时开放准备大厅）
+            Console.WriteLine("登录服务器（login）后输入 start，按配置的端口开始监听并开放大厅。");
         }
         catch (Exception ex)
         {
@@ -293,6 +294,30 @@ internal class Program
 
                 // 游戏进程每收到一条消息都会回一个 "OK"，没有人用它，不再逐条打印
                 if (msg == "OK") continue;
+
+                // ── 共享节点的权威状态：广播给客户端（代理过载时每 0.2 秒一条，不打印）；主机的 share ──
+                if (msg.StartsWith(HNC.NodeSync.NodeProtocol.State) || msg.StartsWith(HNC.NodeSync.NodeProtocol.Share))
+                {
+                    try { NodeRelay.OnModMessage(msg); }
+                    catch (Exception nodeEx) { Console.WriteLine($"[Pipe] 节点状态转发失败（非致命）: {nodeEx.Message}"); }
+                    continue;
+                }
+
+                // ── 全局 flag：主机剧情里增删的 ──
+                if (msg.StartsWith(HNC.Flags.FlagProtocol.Prefix))
+                {
+                    try { FlagRelay.OnModMessage(msg); }
+                    catch (Exception flagEx) { Console.WriteLine($"[Pipe] flag 处理失败（非致命）: {flagEx.Message}"); }
+                    continue;
+                }
+
+                // ── 组队任务：服务端主机（0 号玩家）的锁定 / team 命令 / 确认接任务 ──
+                if (msg.StartsWith(HNC.Teams.TeamProtocol.Prefix))
+                {
+                    try { TeamManager.OnModMessage(msg); }
+                    catch (Exception teamEx) { Console.WriteLine($"[Pipe] 组队消息处理失败（非致命）: {teamEx.Message}"); }
+                    continue;
+                }
 
                 // ── 全员暂停：主机 F8 / F9；阶段进度：服务端报告已开始的阶段 ──
                 if (msg.StartsWith(HNC.Pause.PauseProtocol.Request))

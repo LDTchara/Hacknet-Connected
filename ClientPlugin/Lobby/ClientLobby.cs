@@ -70,6 +70,8 @@ internal static class ClientLobby
         ReturnedFromGame = false;
         HNC.Pause.HncPause.ClearAll();   // 终端会在加入时补发当前的全员暂停状态
         ClientPhases.ResetForLobby();    // 同上，阶段进度也会补发
+        ClientNodeSync.Reset();
+        HNC.Flags.FlagSync.Reset();       // 全局 flag：加入时终端会发 FLAG_ALL          // 共享节点状态：加入时服务端会全部重发
         _startRequested = false;
         _joinSent = false;
         _nextRetry = DateTime.MinValue;
